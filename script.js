@@ -18,8 +18,10 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 
-// ckpunmep's Get coordinates by click on a map + Furqan Anas' Leaflet Draggable Marker
-// let markerId = 0;
+// ChatGPT place markers on click and create polygon script 
+let markersArray = [];
+let polygon = null;
+
 map.on('click', function(e) {
   let Lat = e.latlng.lat;
   let Lng = e.latlng.lng;
@@ -29,18 +31,44 @@ map.on('click', function(e) {
   });
   map.addLayer(marker);
 
-  // markerId += 1;
-  // console.log("Added marker " + markerId);
-  // console.log(Lat.toFixed(5) + "," + Lng.toFixed(5));
+  markersArray.push(marker);
+
+  // Output the current positions of all markers
+  console.clear();
+  markersArray.forEach(function(m) {
+    let pos = m.getLatLng();
+    console.log(pos.lat.toFixed(5) + "," + pos.lng.toFixed(5));
+  });
+
+  // Remove the previous polygon (if any) and create a new one
+  if (polygon !== null) {
+    polygon.remove();
+  }
+  let positionsArray = markersArray.map(function(m) {
+    return m.getLatLng();
+  });
+  polygon = L.polygon(positionsArray, {color: 'red', fillOpacity: 0.7, weight: 2}).addTo(map);
 
   marker.on('dragend', function(event) {
     let position = marker.getLatLng();
     marker.setLatLng(position, {
       draggable: 'true'
     }).bindPopup(position).update();
-    Lat = position.lat;
-    Lng = position.lng;
-    console.log(Lat.toFixed(5) + "," + Lng.toFixed(5));
+
+    // Clear the console
+    console.clear();
+
+    // Output the current positions of all markers
+    markersArray.forEach(function(m) {
+      let pos = m.getLatLng();
+      console.log(pos.lat.toFixed(5) + "," + pos.lng.toFixed(5));
+    });
+
+    // Update the polygon with the new positions
+    positionsArray = markersArray.map(function(m) {
+      return m.getLatLng();
+    });
+    polygon.setLatLngs(positionsArray);
   });
 });
 
@@ -302,6 +330,7 @@ let gpsMarker = null;
 function onLocationFound(e) {
   if (gpsMarker == null) {
     gpsMarker = L.marker(e.latlng).addTo(map);
+    map.setView(e.latlng); // set view to user's current location
   } else {
     gpsMarker.setLatLng(e.latlng);
   }
