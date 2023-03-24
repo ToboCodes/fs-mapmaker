@@ -3,6 +3,7 @@ node_modules/
 .cache/
 dist/
 .package-lock.json
+.parcel-cache
 
 # IDE and Editor files
 .vscode/
