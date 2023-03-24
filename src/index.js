@@ -1,3 +1,5 @@
+import * as L from 'leaflet';
+
 // Set map area and center view
 const coord1 = [-39.603457,-73.038868];
 const coord2 = [-39.808016,-72.774131];
@@ -328,13 +330,21 @@ map.locate({watch: true, enableHighAccuracy: true, maximumAge: 2000});
 let gpsMarker = null;
 
 function onLocationFound(e) {
+  const latlng = e.latlng;
+  const mapBounds = L.latLngBounds(coord1, coord2);
+
+  // Update the view based on the user's location or the default view
+  const newView = mapBounds.contains(latlng) ? latlng : view;
+  map.setView(newView);
+
+  // Create or update the GPS marker with the user's latitude and longitude
   if (gpsMarker == null) {
-    gpsMarker = L.marker(e.latlng).addTo(map);
-    map.setView(e.latlng); // set view to user's current location
+    gpsMarker = L.marker(latlng).addTo(map);
   } else {
-    gpsMarker.setLatLng(e.latlng);
+    gpsMarker.setLatLng(latlng);
   }
 }
+
 
 map.on('locationfound', onLocationFound);
 
