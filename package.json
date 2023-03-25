@@ -17,6 +17,7 @@
     "parcel": "^2.8.3"
   },
   "dependencies": {
+    "geolib": "^3.3.3",
     "leaflet": "1.8.0"
   }
 }
