@@ -139,8 +139,6 @@ map.on('click', function (e) {
   }
 });
 
-
-
 createZones(territorios, colors)
 
 // Set zone and square markers
@@ -223,7 +221,6 @@ function toggleMenu() {
 
 document.getElementById('menuBtn').addEventListener('click', toggleMenu);
 
-
 // Download map when the option is clicked
 document.getElementById('downloadPolygons').addEventListener('click', () => {
   const bounds = map.getBounds();
@@ -241,38 +238,71 @@ document.getElementById('downloadPolygons').addEventListener('click', () => {
   let colorCounter = 1;
   let colorKeys = {};
 
+  // Initialize the markers object
+  let markersObj = {};
+
   const incrementLetter = (str) => {
     const lastChar = str.slice(-1);
     const nextChar = String.fromCharCode(lastChar.charCodeAt(0) + 1);
     return str.slice(0, -1) + nextChar;
   };
 
+  const processPolygon = (layer) => {
+    const color = layer.options.color;
+    let colorKey;
+
+    if (!Object.values(colorsObj).includes(color)) {
+      colorsObj[colorCounter] = color;
+      colorKey = colorCounter;
+      colorKeys[colorKey] = "A";
+      colorCounter++;
+    } else {
+      colorKey = Object.keys(colorsObj).find(key => colorsObj[key] === color);
+      colorKeys[colorKey] = incrementLetter(colorKeys[colorKey]);
+    }
+
+    const vertices = layer.getLatLngs()[0].map(vertex => {
+      return `[${Number(vertex.lat.toFixed(5))},${Number(vertex.lng.toFixed(5))}]`;
+    }).join(',\n      ');
+
+    territorios += `    \"zone${colorKey}${colorKeys[colorKey]}\": [\n      ${vertices}\n    ],\n`;
+  };
+
+  // Check if there's a user-created polygon
+  if (polygon !== null) {
+    processPolygon(polygon);
+  }
+
   map.eachLayer(layer => {
     if (layer instanceof L.Polygon && layer !== polygon) {
-      const color = layer.options.color;
-      let colorKey;
+      processPolygon(layer);
+    } else if (layer instanceof L.Marker) {
+      const labelElement = layer.getElement().querySelector('.map-label-content');
+      
+      if (labelElement) {
+        const label = labelElement.textContent;
+        const latLng = layer.getLatLng();
+        const key = isNaN(parseInt(label)) ? label : "num";
 
-      if (!Object.values(colorsObj).includes(color)) {
-        colorsObj[colorCounter] = color;
-        colorKey = colorCounter;
-        colorKeys[colorKey] = "A";
-        colorCounter++;
-      } else {
-        colorKey = Object.keys(colorsObj).find(key => colorsObj[key] === color);
-        colorKeys[colorKey] = incrementLetter(colorKeys[colorKey]);
+        if (!markersObj[key]) {
+          markersObj[key] = [];
+        }
+        markersObj[key].push([latLng.lat.toFixed(5), latLng.lng.toFixed(5)]);
       }
-
-      const vertices = layer.getLatLngs()[0].map(vertex => {
-        return `[${Number(vertex.lat.toFixed(5))},${Number(vertex.lng.toFixed(5))}]`;
-      }).join(',\n      ');
-
-      territorios += `    \"zone${colorKey}${colorKeys[colorKey]}\": [\n      ${vertices}\n    ],\n`;
     }
   });
 
   territorios = territorios.slice(0, -2) + "\n  },\n";
-  territorios += "  \"colors\": {\n";
+  territorios += "  \"markers\": {\n";
 
+  for (const [key, value] of Object.entries(markersObj)) {
+    territorios += `    \"${key}\": [\n`;
+    territorios += value.map(coord => `      [${coord[0]},${coord[1]}]`).join(',\n');
+    territorios += "\n    ],\n";
+  }
+
+  territorios = territorios.slice(0, -2) + "\n  },\n";
+  territorios += "  \"colors\": {\n";
   for (const [key, value] of Object.entries(colorsObj)) {
     territorios += `    \"${key}\": \"${value}\",\n`;
   }
