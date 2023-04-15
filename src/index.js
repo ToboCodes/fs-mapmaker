@@ -1,11 +1,12 @@
 import * as L from 'leaflet';
 import { isPointInPolygon } from 'geolib';
-import coordinates from './coordinates.json';
+import coords from './coordinates.json';
 
 // Set map area and center view
-let coord1 = [-39.603457,-73.038868];
-let coord2 = [-39.808016,-72.774131];
-let view = [-39.66123,-72.95155];
+let coord1 = coords.base.edge1;
+let coord2 = coords.base.edge2;
+let view = coords.base.center;
+const colorMap = new Map();
 
 // Create map and set OSM tiles
 let map = L.map('map', {
@@ -21,11 +22,9 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
 }).addTo(map);
 
-// Set custom zones
-const territorios = coordinates.territorios;
-
-// Set zone colors
-const colors = coordinates.colors;
+// Load coords from JSON
+const territorios = coords.territorios;
+const colors = coords.colors;
 
 // Updated createZones function
 function createZones(obj, col) {
@@ -38,6 +37,7 @@ function createZones(obj, col) {
 let markersArray = [];
 let polygon = null;
 
+// Edge markers function
 function createDraggableMarker(latlng) {
   let marker = new L.marker(latlng, {
     draggable: 'true'
@@ -63,7 +63,6 @@ function createDraggableMarker(latlng) {
       draggable: 'true'
     }).bindPopup(position).update();
 
-    // Clear the console
     console.clear();
 
     // Output the current positions of all markers
@@ -84,7 +83,16 @@ function createDraggableMarker(latlng) {
   return marker;
 }
 
+// Function to generate a random color
+function getRandomColor() {
+  let color = '#' + Math.floor(Math.random() * 16777215).toString(16);
+  while (colorMap.has(color)) {
+    color = '#' + Math.floor(Math.random() * 16777215).toString(16);
+  }
+  return color;
+}
 
+// On click marker function
 map.on('click', function (e) {
   let clickedInsidePolygon = false;
   let clickedPolygon = null;
@@ -123,7 +131,11 @@ map.on('click', function (e) {
     let positionsArray = markersArray.map(function (m) {
       return m.getLatLng();
     });
-    polygon = L.polygon(positionsArray, { color: 'red', fillOpacity: 0.7, weight: 2 }).addTo(map);
+    
+    const newColor = getRandomColor();
+    colorMap.set(newColor, true);
+    
+    polygon = L.polygon(positionsArray, { color: newColor, fillOpacity: 0.7, weight: 2 }).addTo(map);
   }
 });
 
@@ -132,7 +144,7 @@ map.on('click', function (e) {
 createZones(territorios, colors)
 
 // Set zone and square markers
-const markers = coordinates.markers;
+const markers = coords.markers;
   
   for (let item in markers) {
       for (let idx = 0; idx < markers[item].length; idx++) {
@@ -159,8 +171,8 @@ const markers = coordinates.markers;
 map.locate({
   watch: true,
   enableHighAccuracy: true,
-  maximumAge: 1000, // Reduced maximum age to get more frequent updates
-  timeout: 10000, // Increased timeout to allow for more time to get accurate location
+  maximumAge: 1000,
+  timeout: 10000
 });
 
 // Add location marker
@@ -194,3 +206,85 @@ function onLocationError(e) {
 }
 
 map.on('locationerror', onLocationError);
+
+// Toggle the menu when the menu button is clicked
+let menuVisible = false;
+const menu = document.getElementById('menu');
+
+function toggleMenu() {
+  if (!menuVisible) {
+    menu.style.display = 'block';
+    menuVisible = true;
+  } else {
+    menu.style.display = 'none';
+    menuVisible = false;
+  }
+}
+
+document.getElementById('menuBtn').addEventListener('click', toggleMenu);
+
+
+// Download map when the option is clicked
+document.getElementById('downloadPolygons').addEventListener('click', () => {
+  const bounds = map.getBounds();
+  const edge1 = bounds.getNorthWest();
+  const edge2 = bounds.getSouthEast();
+  const center = map.getCenter();
+
+  let territorios = "{\n  \"base\": {\n";
+  territorios += `    \"edge1\": [${edge1.lat.toFixed(5)},${edge1.lng.toFixed(5)}],\n`;
+  territorios += `    \"edge2\": [${edge2.lat.toFixed(5)},${edge2.lng.toFixed(5)}],\n`;
+  territorios += `    \"center\": [${center.lat.toFixed(5)},${center.lng.toFixed(5)}]\n  },\n`;
+
+  territorios += "  \"territorios\": {\n";
+  let colorsObj = {};
+  let colorCounter = 1;
+  let colorKeys = {};
+
+  const incrementLetter = (str) => {
+    const lastChar = str.slice(-1);
+    const nextChar = String.fromCharCode(lastChar.charCodeAt(0) + 1);
+    return str.slice(0, -1) + nextChar;
+  };
+
+  map.eachLayer(layer => {
+    if (layer instanceof L.Polygon && layer !== polygon) {
+      const color = layer.options.color;
+      let colorKey;
+
+      if (!Object.values(colorsObj).includes(color)) {
+        colorsObj[colorCounter] = color;
+        colorKey = colorCounter;
+        colorKeys[colorKey] = "A";
+        colorCounter++;
+      } else {
+        colorKey = Object.keys(colorsObj).find(key => colorsObj[key] === color);
+        colorKeys[colorKey] = incrementLetter(colorKeys[colorKey]);
+      }
+
+      const vertices = layer.getLatLngs()[0].map(vertex => {
+        return `[${Number(vertex.lat.toFixed(5))},${Number(vertex.lng.toFixed(5))}]`;
+      }).join(',\n      ');
+
+      territorios += `    \"zone${colorKey}${colorKeys[colorKey]}\": [\n      ${vertices}\n    ],\n`;
+    }
+  });
+
+  territorios = territorios.slice(0, -2) + "\n  },\n";
+  territorios += "  \"colors\": {\n";
+
+  for (const [key, value] of Object.entries(colorsObj)) {
+    territorios += `    \"${key}\": \"${value}\",\n`;
+  }
+
+  territorios = territorios.slice(0, -2) + "\n  }\n}";
+
+  const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(territorios);
+
+  const exportFileDefaultName = 'territorios.json';
+
+  const link = document.createElement('a');
+  link.setAttribute('href', dataUri);
+  link.setAttribute('download', exportFileDefaultName);
+  link.click();
+});
