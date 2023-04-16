@@ -37,116 +37,6 @@ function createZones(obj, col) {
 let markersArray = [];
 let polygon = null;
 
-// Edge markers function
-function createDraggableMarker(latlng) {
-  let marker = new L.marker(latlng, {
-    draggable: 'true'
-  });
-  map.addLayer(marker);
-
-  marker.on('click', function (event) {
-    map.removeLayer(marker);
-    markersArray = markersArray.filter(m => m !== marker);
-
-    // Update the polygon with the new positions
-    if (polygon !== null) {
-      let positionsArray = markersArray.map(function (m) {
-        return m.getLatLng();
-      });
-      polygon.setLatLngs(positionsArray);
-    }
-  });
-
-  marker.on('dragend', function (event) {
-    let position = marker.getLatLng();
-    marker.setLatLng(position, {
-      draggable: 'true'
-    }).bindPopup(position).update();
-
-    console.clear();
-
-    // Output the current positions of all markers
-    markersArray.forEach(function (m) {
-      let pos = m.getLatLng();
-      console.log(pos.lat.toFixed(5) + "," + pos.lng.toFixed(5));
-    });
-
-    // Update the polygon with the new positions
-    if (polygon !== null) {
-      let positionsArray = markersArray.map(function (m) {
-        return m.getLatLng();
-      });
-      polygon.setLatLngs(positionsArray);
-    }
-  });
-
-  return marker;
-}
-
-// Function to generate a random color
-function getRandomColor() {
-  let color = '#' + Math.floor(Math.random() * 16777215).toString(16);
-  while (colorMap.has(color)) {
-    color = '#' + Math.floor(Math.random() * 16777215).toString(16);
-  }
-  return color;
-}
-
-// On click marker function
-let editMapEnabled = false;
-
-document.getElementById("editMapToggle").addEventListener("change", function (e) {
-  editMapEnabled = e.target.checked;
-});
-map.on('click', function (e) {
-  if (!editMapEnabled) {
-    return;
-  }
-  let clickedInsidePolygon = false;
-  let clickedPolygon = null;
-  map.eachLayer(function (layer) {
-    if (layer instanceof L.Polygon && layer !== polygon) {
-      const point = { latitude: e.latlng.lat, longitude: e.latlng.lng };
-      const vertices = layer.getLatLngs()[0].map(vertex => {
-        return { latitude: vertex.lat, longitude: vertex.lng };
-      });
-
-      if (isPointInPolygon(point, vertices)) {
-        clickedInsidePolygon = true;
-        clickedPolygon = layer;
-      }
-    }
-  });
-
-  if (clickedInsidePolygon) {
-    markersArray.forEach(marker => map.removeLayer(marker));
-    markersArray = clickedPolygon.getLatLngs()[0].map(vertex => createDraggableMarker(vertex));
-  } else {
-    let marker = createDraggableMarker(e.latlng);
-    markersArray.push(marker);
-
-    // Output the current positions of all markers
-    console.clear();
-    markersArray.forEach(function (m) {
-      let pos = m.getLatLng();
-      console.log(pos.lat.toFixed(5) + "," + pos.lng.toFixed(5));
-    });
-
-    // Remove the previous polygon (if any) and create a new one
-    if (polygon !== null) {
-      polygon.remove();
-    }
-    let positionsArray = markersArray.map(function (m) {
-      return m.getLatLng();
-    });
-    
-    const newColor = getRandomColor();
-    colorMap.set(newColor, true);
-    
-    polygon = L.polygon(positionsArray, { color: newColor, fillOpacity: 0.7, weight: 2 }).addTo(map);
-  }
-});
-
 createZones(territorios, colors)
 
 // Set zone and square markers
@@ -227,6 +117,130 @@ function toggleMenu() {
 }
 
 document.getElementById('menuBtn').addEventListener('click', toggleMenu);
+
+// Edge markers function
+function createDraggableMarker(latlng) {
+  let marker = new L.marker(latlng, {
+    draggable: 'true'
+  });
+  map.addLayer(marker);
+
+  marker.on('click', function (event) {
+    map.removeLayer(marker);
+    markersArray = markersArray.filter(m => m !== marker);
+
+    // Update the polygon with the new positions
+    if (polygon !== null) {
+      let positionsArray = markersArray.map(function (m) {
+        return m.getLatLng();
+      });
+      polygon.setLatLngs(positionsArray);
+    }
+  });
+
+  marker.on('dragend', function (event) {
+    let position = marker.getLatLng();
+    marker.setLatLng(position, {
+      draggable: 'true'
+    }).bindPopup(position).update();
+
+    console.clear();
+
+    // Output the current positions of all markers
+    markersArray.forEach(function (m) {
+      let pos = m.getLatLng();
+      console.log(pos.lat.toFixed(5) + "," + pos.lng.toFixed(5));
+    });
+
+    // Update the polygon with the new positions
+    if (polygon !== null) {
+      let positionsArray = markersArray.map(function (m) {
+        return m.getLatLng();
+      });
+      polygon.setLatLngs(positionsArray);
+    }
+  });
+
+  return marker;
+}
+
+// Function to generate a random color
+function getRandomColor() {
+  let color = '#' + Math.floor(Math.random() * 16777215).toString(16);
+  while (colorMap.has(color)) {
+    color = '#' + Math.floor(Math.random() * 16777215).toString(16);
+  }
+  return color;
+}
+
+// On click marker function
+let editMapEnabled = false;
+
+document.getElementById("editMapToggle").addEventListener("change", function (e) {
+  editMapEnabled = e.target.checked;
+});
+map.on('click', function (e) {
+  if (!editMapEnabled) {
+    return;
+  }
+
+  document.getElementById("editMapToggle").addEventListener("change", function (e) {
+    editMapEnabled = e.target.checked;
+  
+    // Loop through markersArray and set visibility based on editMapEnabled
+    markersArray.forEach(function (marker) {
+      if (editMapEnabled) {
+        marker.addTo(map);
+      } else {
+        marker.remove();
+      }
+    });
+  });
+  
+  let clickedInsidePolygon = false;
+  let clickedPolygon = null;
+  map.eachLayer(function (layer) {
+    if (layer instanceof L.Polygon && layer !== polygon) {
+      const point = { latitude: e.latlng.lat, longitude: e.latlng.lng };
+      const vertices = layer.getLatLngs()[0].map(vertex => {
+        return { latitude: vertex.lat, longitude: vertex.lng };
+      });
+
+      if (isPointInPolygon(point, vertices)) {
+        clickedInsidePolygon = true;
+        clickedPolygon = layer;
+      }
+    }
+  });
+
+  if (clickedInsidePolygon) {
+    markersArray.forEach(marker => map.removeLayer(marker));
+    markersArray = clickedPolygon.getLatLngs()[0].map(vertex => createDraggableMarker(vertex));
+  } else {
+    let marker = createDraggableMarker(e.latlng);
+    markersArray.push(marker);
+
+    // Output the current positions of all markers
+    console.clear();
+    markersArray.forEach(function (m) {
+      let pos = m.getLatLng();
+      console.log(pos.lat.toFixed(5) + "," + pos.lng.toFixed(5));
+    });
+
+    // Remove the previous polygon (if any) and create a new one
+    if (polygon !== null) {
+      polygon.remove();
+    }
+    let positionsArray = markersArray.map(function (m) {
+      return m.getLatLng();
+    });
+    
+    const newColor = getRandomColor();
+    colorMap.set(newColor, true);
+    
+    polygon = L.polygon(positionsArray, { color: newColor, fillOpacity: 0.7, weight: 2 }).addTo(map);
+  }
+});
 
 // Download map menu option
 document.getElementById('downloadPolygons').addEventListener('click', () => {
