@@ -13,15 +13,22 @@
 />
 </head>
 <body>
-  <div id="map"></div>
+<div id="map"></div>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Andada Pro">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Noto Sans">
   <script type="module" defer src="./src/index.js"></script>
   <div class="map-menu-btn" id="menuBtn">&#9776;</div>
-<div class="map-menu" id="menu">
-  <ul>
-    <li id="downloadPolygons">Descargar mapa</li>
-  </ul>
+  <div class="map-menu" id="menu">
+    <ul>
+      <li class="menu-item">Editar mapa
+        <label class="switch">
+          <input type="checkbox" id="editMapToggle">
+          <span class="slider round"></span>
+        </label>
+      </li>
+      <li class="menu-item" id="downloadPolygons">Descargar mapa</li>
+    </ul>
+  </div>
 </div>
 </body>
 </html>

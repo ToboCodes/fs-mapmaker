@@ -10,7 +10,6 @@ html, body {
     height: 100%;
   }
   
-  /*Wraperclass for the divicon*/
   .map-label {
     position: absolute;
     bottom: 0;left: -50%;
@@ -18,7 +17,7 @@ html, body {
     flex-direction: column;
     text-align: center;
   }
-  /*Wrap the content of the divicon (text) in this class*/
+ 
   .map-label-content {
     order: 1;
     position: relative; left: -50%;
@@ -30,17 +29,16 @@ html, body {
     padding: 3px;
     white-space: nowrap;
   }
-  /*Add this arrow*/
+ 
   .map-label-arrow {
     order: 2;
     width: 0px; height: 0px; left: 50%;
     border-style: solid;
     border-color: #444 transparent transparent transparent;
-    border-width: 10px 6px 0 6px; /*[first number is height, second/fourth are rigth/left width]*/
+    border-width: 10px 6px 0 6px;
     margin-left: -6px;
   }
   
-  /*Instance classes*/
   .map-label.number {
     font-family: "Andada Pro", serif;
     font-weight: bolder;
@@ -120,4 +118,76 @@ html, body {
   .map-menu ul li:hover {
     background-color: rgba(0, 0, 0, 0.1);
   }
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+    margin-left: 16px;
+  }
   
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: .4s;
+    transition: .4s;
+  }
+  
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+  }
+  
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+  
+  input:focus + .slider {
+    box-shadow: 0 0 1px #2196F3;
+  }
+  
+  input:checked + .slider:before {
+    -webkit-transform: translateX(20px);
+    -ms-transform: translateX(20px);
+    transform: translateX(20px);
+  }
+  
+  .slider.round {
+    border-radius: 34px;
+  }
+  
+  .slider.round:before {
+    border-radius: 50%;
+  }
+  
+  .toggle-label {
+    display: inline-block;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  .menu-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0;
+    margin: 0;
+  }

@@ -93,7 +93,15 @@ function getRandomColor() {
 }
 
 // On click marker function
+let editMapEnabled = false;
+
+document.getElementById("editMapToggle").addEventListener("change", function (e) {
+  editMapEnabled = e.target.checked;
+});
 map.on('click', function (e) {
+  if (!editMapEnabled) {
+    return;
+  }
   let clickedInsidePolygon = false;
   let clickedPolygon = null;
   map.eachLayer(function (layer) {
@@ -198,14 +206,13 @@ function onLocationFound(e) {
 
 map.on('locationfound', onLocationFound);
 
-// On location error
 function onLocationError(e) {
   alert("No se pudo determinar su ubicación");
 }
 
 map.on('locationerror', onLocationError);
 
-// Toggle the menu when the menu button is clicked
+// Menu button toggle
 let menuVisible = false;
 const menu = document.getElementById('menu');
 
@@ -221,7 +228,7 @@ function toggleMenu() {
 
 document.getElementById('menuBtn').addEventListener('click', toggleMenu);
 
-// Download map when the option is clicked
+// Download map menu option
 document.getElementById('downloadPolygons').addEventListener('click', () => {
   const bounds = map.getBounds();
   const edge1 = bounds.getNorthWest();
