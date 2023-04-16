@@ -173,30 +173,35 @@ function getRandomColor() {
   return color;
 }
 
+// Floating menu elements
+const floatingMenu = document.getElementById("floatingMenu");
+const editPolygonButton = document.getElementById("editPolygon");
+const deletePolygonButton = document.getElementById("deletePolygon");
+
 // On click marker function
 let editMapEnabled = false;
+let selectedPolygon = null;
 
 document.getElementById("editMapToggle").addEventListener("change", function (e) {
   editMapEnabled = e.target.checked;
+
+  // Loop through markersArray and set visibility based on editMapEnabled
+  markersArray.forEach(function (marker) {
+    if (editMapEnabled) {
+      marker.addTo(map);
+    } else {
+      marker.remove();
+    }
+  });
 });
+
 map.on('click', function (e) {
   if (!editMapEnabled) {
     return;
   }
 
-  document.getElementById("editMapToggle").addEventListener("change", function (e) {
-    editMapEnabled = e.target.checked;
-  
-    // Loop through markersArray and set visibility based on editMapEnabled
-    markersArray.forEach(function (marker) {
-      if (editMapEnabled) {
-        marker.addTo(map);
-      } else {
-        marker.remove();
-      }
-    });
-  });
-  
+  floatingMenu.style.display = "none";
+
   let clickedInsidePolygon = false;
   let clickedPolygon = null;
   map.eachLayer(function (layer) {
@@ -214,8 +219,10 @@ map.on('click', function (e) {
   });
 
   if (clickedInsidePolygon) {
-    markersArray.forEach(marker => map.removeLayer(marker));
-    markersArray = clickedPolygon.getLatLngs()[0].map(vertex => createDraggableMarker(vertex));
+    selectedPolygon = clickedPolygon;
+    const polygonCenter = selectedPolygon.getBounds().getCenter();
+    L.DomUtil.setPosition(floatingMenu, map.latLngToLayerPoint(polygonCenter));
+    floatingMenu.style.display = "block";
   } else {
     let marker = createDraggableMarker(e.latlng);
     markersArray.push(marker);
@@ -240,6 +247,18 @@ map.on('click', function (e) {
     
     polygon = L.polygon(positionsArray, { color: newColor, fillOpacity: 0.7, weight: 2 }).addTo(map);
   }
+});
+
+editPolygonButton.addEventListener("click", function () {
+  floatingMenu.style.display = "none";
+  markersArray.forEach(marker => map.removeLayer(marker));
+  markersArray = selectedPolygon.getLatLngs()[0].map(vertex => createDraggableMarker(vertex));
+});
+
+deletePolygonButton.addEventListener("click", function () {
+  floatingMenu.style.display = "none";
+  map.removeLayer(selectedPolygon);
+  selectedPolygon = null;
 });
 
 // Download map menu option

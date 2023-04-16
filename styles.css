@@ -191,3 +191,29 @@ html, body {
     padding: 0;
     margin: 0;
   }
+
+  .floating-menu {
+    position: absolute;
+    display: none;
+    background-color: white;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    padding: 4px;
+    z-index: 1000;
+  }
+  
+  .floating-menu-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+  }
+  
+  .floating-menu-btn:focus {
+    outline: none;
+  }
+  
+  .floating-menu-btn:not(:last-child) {
+    margin-right: 4px;
+  }
+  
