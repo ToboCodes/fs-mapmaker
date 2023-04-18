@@ -1,35 +1,27 @@
 # FS MapMaker
 
-FS MapMaker is an online custom map creation tool that allows users to draw polygons on a map, place markers, and get the coordinates of those markers. Users can also click on existing polygons to view their vertices and modify them.
+FS MapMaker is a web application that allows users to create and edit custom maps using Leaflet.js. Users can create polygons by clicking on the map and adjust their shape by dragging the vertices. Additionally, users can edit and delete existing polygons.
 
 ## Features
 
-- Draw polygons by clicking on the map
-- Drag markers to adjust the shape of the polygons
-- Click on existing polygons to place markers on their vertices
-- Remove markers by clicking on them
-- Automatically centers the map on the user's location upon loading (if location permission is granted)
-- Continuously updates the user's location with a GPS marker
+- Create custom polygons by clicking on the map
+- Adjust polygon vertices by dragging them
+- Edit and delete existing polygons
+- Toggle map editing mode on and off
+- Download map data as a file
 
-## Dependencies
+## Installation
 
-- Leaflet.js
-- geolib
+1. Clone this repository (`git clone https://github.com/ToboCodes/fs-mapmaker.git`)
+2. Navigate to the project directory (`cd fs-mapmaker`)
+3. Install dependencies (`npm install`)
+4. Start the development server (`npm run start`)
+5. Open your browser and navigate to `http://localhost:1234`
 
-## Getting Started
+## Contributing
 
-1. Clone the repository.
-2. Run `npm install` to install the necessary dependencies.
-3. Run `npm start` to start the development server.
-4. Open your browser and navigate to `http://localhost:1234`.
-
-## Usage
-
-1. Click on the map to place markers and automatically create a polygon from the markers.
-2. Drag the markers to adjust the shape of the polygon.
-3. Click on an existing polygon to place markers on its vertices. Drag those markers to update the polygon shape.
-4. Click on a marker to remove it.
-
-## License
-
-This project is open-source and available under the MIT License.
+1. Fork the repository
+2. Create a new branch for your feature (`git checkout -b feature/my-new-feature`)
+3. Commit your changes (`git commit -m 'Add some feature'`)
+4. Push to the branch (`git push origin feature/my-new-feature`)
+5. Create a new pull request
