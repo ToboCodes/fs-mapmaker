@@ -217,3 +217,14 @@ html, body {
     margin-right: 4px;
   }
   
+  .satellite-toggle-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .satellite-toggle-container label {
+    margin: 0;
+  }
+  

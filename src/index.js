@@ -8,19 +8,43 @@ let coord2 = coords.base.edge2;
 let view = coords.base.center;
 const colorMap = new Map();
 
-// Create map and set OSM tiles
+// Create Esri World Imagery layer
+let esriWorldImagery = L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  {
+    attribution:
+      'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+    maxZoom: 18,
+  }
+);
+
+// Create OSM layer
+let osmLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 18,
+  attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+});
+
+// Initialize the map with the OSM layer
 let map = L.map('map', {
-  maxZoom: 19,
+  layers: [osmLayer],
+  maxZoom: 18,
   minZoom: 15,
   maxBounds: [
     coord1,
     coord2
   ],
 }).setView(view, 16);
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
-}).addTo(map);
+
+// Add event listener to toggle between OSM and Satellite layers
+document.getElementById("satelliteToggle").addEventListener("change", function (e) {
+  if (e.target.checked) {
+    map.removeLayer(osmLayer);
+    map.addLayer(esriWorldImagery);
+  } else {
+    map.removeLayer(esriWorldImagery);
+    map.addLayer(osmLayer);
+  }
+});
 
 // Load coords from JSON
 const territorios = coords.territorios;
