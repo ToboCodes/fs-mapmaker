@@ -1,6 +1,6 @@
 import * as L from 'leaflet';
 import { isPointInPolygon } from 'geolib';
-import coords from './coordinates.json';
+import coords from './new_coordinates.json';
 
 // Set map area and center view
 let coord1 = coords.base.edge1;
@@ -46,46 +46,62 @@ document.getElementById("satelliteToggle").addEventListener("change", function (
   }
 });
 
-// Load coords from JSON
-const territorios = coords.territorios;
-const colors = coords.colors;
+// Load territories and colors from new JSON
+const territories = coords.territories;
 
 // Updated createZones function
-function createZones(obj, col) {
-  for (let i in obj) {
-    let num = i.match(/\d+/)[0];
-    let polygon = L.polygon(obj[i], { color: col[num], fillOpacity: 0.7, weight: 2 }).addTo(map);
+function createZones(territories) {
+  for (const territoryKey in territories) {
+    const territory = territories[territoryKey];
+    const color = territory.color;
+    for (const squareKey in territory) {
+      if (squareKey.startsWith("Square")) {
+        const edges = territory[squareKey].edges;
+        const polygon = L.polygon(edges, { color: color, fillOpacity: 0.7, weight: 2 }).addTo(map);
+      }
+    }
   }
 }
 
 let markersArray = [];
 let polygon = null;
 
-createZones(territorios, colors)
+createZones(territories);
 
-// Set zone and square markers
-const markers = coords.markers;
-  
-  for (let item in markers) {
-      for (let idx = 0; idx < markers[item].length; idx++) {
-          if (item === 'num') {
-              let pos = new L.LatLng(markers[item][idx][0],markers[item][idx][1]);
-              let iconNum = (idx + 1);
-              let icon = L.divIcon({
-                  iconSize:null,
-                  html:'<div class="map-label number"><div class="map-label-content">'+iconNum+'</div><div class="map-label-arrow"></div></div>'
-                });
-              L.marker(pos,{icon: icon}).addTo(map);
-          } else {
-            let pos = new L.LatLng(markers[item][idx][0],markers[item][idx][1]);
-            let icon = L.divIcon({
-              iconSize:null,
-              html:'<div class="map-label square"><div class="map-label-content">'+item+'</div><div class="map-label-arrow"></div></div>'
-            });
-          L.marker(pos,{icon: icon}).addTo(map);
-          }
+// Set Markers function
+function setMarkers(territories) {
+  for (const territoryKey in territories) {
+    const territory = territories[territoryKey];
+    const terrNum = territoryKey.match(/\d+/)[0];
+
+    // Set territory number marker
+    const terrMarker = territory.terrMarker;
+    const posTerrMarker = new L.LatLng(terrMarker[0], terrMarker[1]);
+    const iconTerrNum = terrNum;
+    const iconTerr = L.divIcon({
+      iconSize: null,
+      html: `<div class="map-label number"><div class="map-label-content">${iconTerrNum}</div><div class="map-label-arrow"></div></div>`,
+    });
+    L.marker(posTerrMarker, { icon: iconTerr }).addTo(map);
+
+    // Set square markers
+    for (const squareKey in territory) {
+      if (squareKey.startsWith("Square")) {
+        const squareMarker = territory[squareKey].squareMarker;
+        const squareLetter = squareKey.slice(-1);
+        const posSquareMarker = new L.LatLng(squareMarker[0], squareMarker[1]);
+        const iconSquare = L.divIcon({
+          iconSize: null,
+          html: `<div class="map-label square"><div class="map-label-content">${squareLetter}</div><div class="map-label-arrow"></div></div>`,
+        });
+        L.marker(posSquareMarker, { icon: iconSquare }).addTo(map);
       }
+    }
   }
+}
+
+setMarkers(territories);
+
 
 // Enable device GPS
 map.locate({
