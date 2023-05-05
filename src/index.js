@@ -49,7 +49,9 @@ document.getElementById("satelliteToggle").addEventListener("change", function (
 // Load territories and colors from new JSON
 const territories = coords.territories;
 
-// Updated createZones function
+// Function to create polygons from the JSON source and assign them variable names
+const polygonsMap = {};
+
 function createZones(territories) {
   for (const territoryKey in territories) {
     const territory = territories[territoryKey];
@@ -58,17 +60,18 @@ function createZones(territories) {
       if (squareKey.startsWith("Square")) {
         const edges = territory[squareKey].edges;
         const polygon = L.polygon(edges, { color: color, fillOpacity: 0.7, weight: 2 }).addTo(map);
+        polygonsMap[squareKey] = polygon;
       }
     }
   }
 }
 
-let markersArray = [];
+createZones(territories);
 let polygon = null;
 
-createZones(territories);
-
 // Set Markers function
+const markersMap = {};
+
 function setMarkers(territories) {
   for (const territoryKey in territories) {
     const territory = territories[territoryKey];
@@ -82,7 +85,8 @@ function setMarkers(territories) {
       iconSize: null,
       html: `<div class="map-label number"><div class="map-label-content">${iconTerrNum}</div><div class="map-label-arrow"></div></div>`,
     });
-    L.marker(posTerrMarker, { icon: iconTerr }).addTo(map);
+    const terrMarkerInstance = L.marker(posTerrMarker, { icon: iconTerr }).addTo(map);
+    markersMap[`${territoryKey}Marker`] = terrMarkerInstance;
 
     // Set square markers
     for (const squareKey in territory) {
@@ -94,13 +98,15 @@ function setMarkers(territories) {
           iconSize: null,
           html: `<div class="map-label square"><div class="map-label-content">${squareLetter}</div><div class="map-label-arrow"></div></div>`,
         });
-        L.marker(posSquareMarker, { icon: iconSquare }).addTo(map);
+        const squareMarkerInstance = L.marker(posSquareMarker, { icon: iconSquare }).addTo(map);
+        markersMap[`${territoryKey}${squareKey}Marker`] = squareMarkerInstance;
       }
     }
   }
 }
 
 setMarkers(territories);
+
 
 
 // Enable device GPS
@@ -183,21 +189,25 @@ function createDraggableMarker(latlng) {
     marker.setLatLng(position, {
       draggable: 'true'
     }).bindPopup(position).update();
-
+  
     console.clear();
-
+  
     // Output the current positions of all markers
     markersArray.forEach(function (m) {
       let pos = m.getLatLng();
       console.log(pos.lat.toFixed(5) + "," + pos.lng.toFixed(5));
     });
-
+  
     // Update the polygon with the new positions
     if (polygon !== null) {
       let positionsArray = markersArray.map(function (m) {
         return m.getLatLng();
       });
       polygon.setLatLngs(positionsArray);
+      // Update the selectedPolygon if it's the same as the polygon being edited
+      if (selectedPolygon === polygon) {
+        selectedPolygon.setLatLngs(positionsArray);
+      }
     }
   });
 
@@ -264,8 +274,11 @@ map.on('click', function (e) {
     L.DomUtil.setPosition(floatingMenu, map.latLngToLayerPoint(polygonCenter));
     floatingMenu.style.display = "block";
   } else {
-    let marker = createDraggableMarker(e.latlng);
-    markersArray.push(marker);
+    // Check if there's a polygon being edited and deselect it
+    if (polygon !== null && polygon !== selectedPolygon) {
+      polygon.remove();
+      polygon = null;
+    }
 
     // Output the current positions of all markers
     console.clear();
@@ -275,17 +288,16 @@ map.on('click', function (e) {
     });
 
     // Remove the previous polygon (if any) and create a new one
-    if (polygon !== null) {
-      polygon.remove();
+    if (polygon === null) {
+      let positionsArray = markersArray.map(function (m) {
+        return m.getLatLng();
+      });
+
+      const newColor = getRandomColor();
+      colorMap.set(newColor, true);
+
+      polygon = L.polygon(positionsArray, { color: newColor, fillOpacity: 0.7, weight: 2 }).addTo(map);
     }
-    let positionsArray = markersArray.map(function (m) {
-      return m.getLatLng();
-    });
-    
-    const newColor = getRandomColor();
-    colorMap.set(newColor, true);
-    
-    polygon = L.polygon(positionsArray, { color: newColor, fillOpacity: 0.7, weight: 2 }).addTo(map);
   }
 });
 
@@ -293,6 +305,7 @@ editPolygonButton.addEventListener("click", function () {
   floatingMenu.style.display = "none";
   markersArray.forEach(marker => map.removeLayer(marker));
   markersArray = selectedPolygon.getLatLngs()[0].map(vertex => createDraggableMarker(vertex));
+  polygon = selectedPolygon;
 });
 
 deletePolygonButton.addEventListener("click", function () {
