@@ -1,6 +1,6 @@
 import * as L from 'leaflet';
 import { isPointInPolygon } from 'geolib';
-import coords from './new_coordinates.json';
+import coords from './territorios.json';
 
 // Set map area and center view
 let coord1 = coords.base.edge1;
@@ -301,6 +301,21 @@ deletePolygonButton.addEventListener("click", function () {
   selectedPolygon = null;
 });
 
+const findPolygonByPoint = (point) => {
+  let foundPolygon = null;
+
+  map.eachLayer(layer => {
+    if (layer instanceof L.Polygon) {
+      if (layer.getBounds().contains(point)) {
+        foundPolygon = layer;
+      }
+    }
+  });
+
+  return foundPolygon;
+};
+
+
 // Download map menu option
 document.getElementById('downloadPolygons').addEventListener('click', () => {
   const bounds = map.getBounds();
@@ -308,18 +323,13 @@ document.getElementById('downloadPolygons').addEventListener('click', () => {
   const edge2 = bounds.getSouthEast();
   const center = map.getCenter();
 
-  let territorios = "{\n  \"base\": {\n";
-  territorios += `    \"edge1\": [${edge1.lat.toFixed(5)},${edge1.lng.toFixed(5)}],\n`;
-  territorios += `    \"edge2\": [${edge2.lat.toFixed(5)},${edge2.lng.toFixed(5)}],\n`;
-  territorios += `    \"center\": [${center.lat.toFixed(5)},${center.lng.toFixed(5)}]\n  },\n`;
+  let base = {
+    edge1: [edge1.lat.toFixed(5), edge1.lng.toFixed(5)],
+    edge2: [edge2.lat.toFixed(5), edge2.lng.toFixed(5)],
+    center: [center.lat.toFixed(5), center.lng.toFixed(5)],
+  };
 
-  territorios += "  \"territorios\": {\n";
-  let colorsObj = {};
-  let colorCounter = 1;
-  let colorKeys = {};
-
-  // Initialize the markers object
-  let markersObj = {};
+  let territories = {};
 
   const incrementLetter = (str) => {
     const lastChar = str.slice(-1);
@@ -327,69 +337,114 @@ document.getElementById('downloadPolygons').addEventListener('click', () => {
     return str.slice(0, -1) + nextChar;
   };
 
-  const processPolygon = (layer) => {
-    const color = layer.options.color;
-    let colorKey;
-
-    if (!Object.values(colorsObj).includes(color)) {
-      colorsObj[colorCounter] = color;
-      colorKey = colorCounter;
-      colorKeys[colorKey] = "A";
-      colorCounter++;
-    } else {
-      colorKey = Object.keys(colorsObj).find(key => colorsObj[key] === color);
-      colorKeys[colorKey] = incrementLetter(colorKeys[colorKey]);
-    }
-
-    const vertices = layer.getLatLngs()[0].map(vertex => {
-      return `[${Number(vertex.lat.toFixed(5))},${Number(vertex.lng.toFixed(5))}]`;
-    }).join(',\n      ');
-
-    territorios += `    \"zone${colorKey}${colorKeys[colorKey]}\": [\n      ${vertices}\n    ],\n`;
+  const findPolygonsByColor = (color) => {
+    let polygons = [];
+    map.eachLayer(layer => {
+      if (layer instanceof L.Polygon && layer.options.color === color) {
+        polygons.push(layer);
+      }
+    });
+    return polygons;
   };
 
-  // Check if there's a user-created polygon
-  if (polygon !== null) {
-    processPolygon(polygon);
-  }
+  const findMarkerInPolygon = (polygon) => {
+    let marker = null;
+    map.eachLayer(layer => {
+      if (layer instanceof L.Marker) {
+        const latLng = layer.getLatLng();
+        if (polygon.getBounds().contains(latLng)) {
+          marker = layer;
+        }
+      }
+    });
+    return marker;
+  };
+
+  const findPolygonsWithLetterMarkers = (polygons) => {
+    let polygonsWithMarkers = [];
+    let polygonsWithoutMarkers = [];
+
+    polygons.forEach(polygon => {
+      const marker = findMarkerInPolygon(polygon);
+      if (marker !== null) {
+        const labelElement = marker.getElement().querySelector('.map-label-content');
+        if (labelElement) {
+          const label = labelElement.textContent;
+          if (label.length === 1 && label.toUpperCase() === label) {
+            polygonsWithMarkers.push({ polygon, marker });
+          } else {
+            polygonsWithoutMarkers.push(polygon);
+          }
+        }
+      } else {
+        polygonsWithoutMarkers.push(polygon);
+      }
+    });
+
+    return { polygonsWithMarkers, polygonsWithoutMarkers };
+  };
 
   map.eachLayer(layer => {
-    if (layer instanceof L.Polygon && layer !== polygon) {
-      processPolygon(layer);
-    } else if (layer instanceof L.Marker) {
+    if (layer instanceof L.Marker) {
       const labelElement = layer.getElement().querySelector('.map-label-content');
-      
       if (labelElement) {
         const label = labelElement.textContent;
         const latLng = layer.getLatLng();
-        const key = isNaN(parseInt(label)) ? label : "num";
 
-        if (!markersObj[key]) {
-          markersObj[key] = [];
+        if (!isNaN(parseInt(label))) {
+          const terrID = `terr${label}`;
+          if (!territories.hasOwnProperty(terrID)) {
+            territories[terrID] = {
+              terrMarker: [latLng.lat.toFixed(5), latLng.lng.toFixed(5)],
+              color: '',
+            };
+          }
+
+          const polygon = findPolygonByPoint(latLng);
+          if (polygon) {
+            territories[terrID].color = polygon.options.color;
+
+            const polygons = findPolygonsByColor(polygon.options.color);
+            const { polygonsWithMarkers, polygonsWithoutMarkers } = findPolygonsWithLetterMarkers(polygons);
+
+
+          let currentLetter = 'A';
+          polygonsWithMarkers.forEach(({ polygon, marker }) => {
+            const labelElement = marker.getElement().querySelector('.map-label-content');
+            const label = labelElement.textContent;
+            const latLng = marker.getLatLng();
+            const vertices = polygon.getLatLngs()[0].map(vertex => {
+              return [Number(vertex.lat.toFixed(5)), Number(vertex.lng.toFixed(5))];
+            });
+
+            territories[terrID][`Square${label}`] = {
+              squareMarker: [latLng.lat.toFixed(5), latLng.lng.toFixed(5)],
+              edges: vertices,
+            };
+          });
+
+          polygonsWithoutMarkers.forEach(polygon => {
+            const vertices = polygon.getLatLngs()[0].map(vertex => {
+              return [Number(vertex.lat.toFixed(5)), Number(vertex.lng.toFixed(5))];
+            });
+
+            territories[terrID][`Square${currentLetter}`] = {
+              squareMarker: [],
+              edges: vertices,
+            };
+
+            currentLetter = incrementLetter(currentLetter);
+          });
+
+          }
         }
-        markersObj[key].push([latLng.lat.toFixed(5), latLng.lng.toFixed(5)]);
       }
     }
   });
 
-  territorios = territorios.slice(0, -2) + "\n  },\n";
-  territorios += "  \"markers\": {\n";
+  const territoriosJSON = JSON.stringify({ base, territories }, null, 2);
 
-  for (const [key, value] of Object.entries(markersObj)) {
-    territorios += `    \"${key}\": [\n`;
-    territorios += value.map(coord => `      [${coord[0]},${coord[1]}]`).join(',\n');
-    territorios += "\n    ],\n";
-  }
-
-  territorios = territorios.slice(0, -2) + "\n  },\n";
-  territorios += "  \"colors\": {\n";
-  for (const [key, value] of Object.entries(colorsObj)) {
-    territorios += `    \"${key}\": \"${value}\",\n`;
-  }
-
-  territorios = territorios.slice(0, -2) + "\n  }\n}";
-
-  const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(territorios);
+  const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(territoriosJSON);
 
   const exportFileDefaultName = 'territorios.json';
 
