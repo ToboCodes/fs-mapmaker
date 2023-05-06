@@ -8,6 +8,8 @@ let coord2 = coords.base.edge2;
 let view = coords.base.center;
 const colorMap = new Map();
 
+let isEditingEnabled = false;
+
 // Create Esri World Imagery layer
 let esriWorldImagery = L.tileLayer(
   "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -46,6 +48,12 @@ document.getElementById("satelliteToggle").addEventListener("change", function (
   }
 });
 
+// Add event listener to toggle map editing
+document.getElementById("editToggle").addEventListener("change", function (e) {
+  isEditingEnabled = e.target.checked;
+});
+
+
 // Load territories and colors from new JSON
 const territories = coords.territories;
 
@@ -62,66 +70,81 @@ function createZones(territories) {
         const polygon = L.polygon(edges, { color: color, fillOpacity: 0.7, weight: 2 }).addTo(map);
         const polygonName = territoryKey + squareKey;
         polygonsMap[polygonName] = polygon;
-
-        // Add click event listener to the polygon
-        polygon.on('click', (e) => {
-          const point = {
-            latitude: e.latlng.lat,
-            longitude: e.latlng.lng
-          };
-
-          // Check if the click point is inside the polygon
-          const isInside = isPointInPolygon(point, edges.map(coord => ({ latitude: coord[0], longitude: coord[1] })));
-          
-          // If click is inside, print the variable name and its edges
-          if (isInside) {
-            console.log(`Variable name: ${polygonName}`);
-            console.log(`Variable value (edges):`, edges);
-          }
-        });
-
-        // Function to update the polygon when a vertex is dragged
-        function updatePolygon() {
-          const newEdges = vertexMarkers.map(marker => {
-            const latLng = marker.getLatLng().wrap();
-            return [latLng.lat, latLng.lng];
-          });
-          polygon.setLatLngs(newEdges);
-        }
-        
-
-        // Create draggable markers for each vertex of the polygon
-        const vertexMarkers = edges.map(coord => {
-          const marker = L.marker(coord, { draggable: true, zIndexOffset: 1000 }).addTo(map);
-
-          // Update the polygon when a vertex marker is dragged
-          marker.on('drag', updatePolygon);
-
-          return marker;
-        });
-
-        // Hide the vertex markers by default
-        vertexMarkers.forEach(marker => marker.removeFrom(map));
-
-        // Show the vertex markers when the polygon is clicked
-        polygon.on('click', () => {
-          vertexMarkers.forEach(marker => marker.addTo(map));
-        });
-
-        // Hide the vertex markers when clicking outside the polygon
-        map.on('click', (e) => {
-          if (!isPointInPolygon(e.latlng, edges.map(coord => ({ latitude: coord[0], longitude: coord[1] })))) {
-            vertexMarkers.forEach(marker => marker.removeFrom(map));
-          }
-        });
       }
     }
   }
 }
 
+function setupPolygonInteractions(polygon, polygonName, edges) {
+  // Add click event listener to the polygon
+  polygon.on('click', (e) => {
+    if (!isEditingEnabled) return;
+
+    const point = {
+      latitude: e.latlng.lat,
+      longitude: e.latlng.lng
+    };
+
+    // Check if the click point is inside the polygon
+    const isInside = isPointInPolygon(point, edges.map(coord => ({ latitude: coord[0], longitude: coord[1] })));
+
+    // If click is inside, print the variable name and its edges
+    if (isInside) {
+      console.clear();
+      console.log(`Variable name: ${polygonName}`);
+      console.log(`Variable value (edges):`, edges);
+    }
+  });
+
+  // Function to update the polygon when a vertex is dragged
+  function updatePolygon() {
+    if (!isEditingEnabled) return;
+    const newEdges = vertexMarkers.map(marker => {
+      const latLng = marker.getLatLng().wrap();
+      return [latLng.lat, latLng.lng];
+    });
+    polygon.setLatLngs(newEdges);
+  }
+
+  // Create draggable markers for each vertex of the polygon
+  const vertexMarkers = edges.map(coord => {
+    const marker = L.marker(coord, { draggable: true, zIndexOffset: 1000 }).addTo(map);
+
+    // Update the polygon when a vertex marker is dragged
+    marker.on('drag', updatePolygon);
+
+    return marker;
+  });
+
+  // Hide the vertex markers by default
+  vertexMarkers.forEach(marker => marker.removeFrom(map));
+
+  // Show the vertex markers when the polygon is clicked
+  polygon.on('click', () => {
+    if (!isEditingEnabled) return;
+    vertexMarkers.forEach(marker => marker.addTo(map));
+  });
+
+  // Hide the vertex markers when clicking outside the polygon
+  map.on('click', (e) => {
+    if (!isPointInPolygon(e.latlng, edges.map(coord => ({ latitude: coord[0], longitude: coord[1] })))) {
+      vertexMarkers.forEach(marker => marker.removeFrom(map));
+    }
+  });
+}
+
+
 
 createZones(territories);
-let polygon = null;
+
+for (const polygonName in polygonsMap) {
+  const polygon = polygonsMap[polygonName];
+  const territoryKey = polygonName.replace(/Square.*/, '');
+  const squareKey = polygonName.replace(territoryKey, '');
+  const edges = territories[territoryKey][squareKey].edges;
+  setupPolygonInteractions(polygon, polygonName, edges);
+}
+
 
 // Set Markers function
 const markersMap = {};
