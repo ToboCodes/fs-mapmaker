@@ -60,11 +60,65 @@ function createZones(territories) {
       if (squareKey.startsWith("Square")) {
         const edges = territory[squareKey].edges;
         const polygon = L.polygon(edges, { color: color, fillOpacity: 0.7, weight: 2 }).addTo(map);
-        polygonsMap[squareKey] = polygon;
+        const polygonName = territoryKey + squareKey;
+        polygonsMap[polygonName] = polygon;
+
+        // Add click event listener to the polygon
+        polygon.on('click', (e) => {
+          const point = {
+            latitude: e.latlng.lat,
+            longitude: e.latlng.lng
+          };
+
+          // Check if the click point is inside the polygon
+          const isInside = isPointInPolygon(point, edges.map(coord => ({ latitude: coord[0], longitude: coord[1] })));
+          
+          // If click is inside, print the variable name and its edges
+          if (isInside) {
+            console.log(`Variable name: ${polygonName}`);
+            console.log(`Variable value (edges):`, edges);
+          }
+        });
+
+        // Function to update the polygon when a vertex is dragged
+        function updatePolygon() {
+          const newEdges = vertexMarkers.map(marker => {
+            const latLng = marker.getLatLng().wrap();
+            return [latLng.lat, latLng.lng];
+          });
+          polygon.setLatLngs(newEdges);
+        }
+        
+
+        // Create draggable markers for each vertex of the polygon
+        const vertexMarkers = edges.map(coord => {
+          const marker = L.marker(coord, { draggable: true, zIndexOffset: 1000 }).addTo(map);
+
+          // Update the polygon when a vertex marker is dragged
+          marker.on('drag', updatePolygon);
+
+          return marker;
+        });
+
+        // Hide the vertex markers by default
+        vertexMarkers.forEach(marker => marker.removeFrom(map));
+
+        // Show the vertex markers when the polygon is clicked
+        polygon.on('click', () => {
+          vertexMarkers.forEach(marker => marker.addTo(map));
+        });
+
+        // Hide the vertex markers when clicking outside the polygon
+        map.on('click', (e) => {
+          if (!isPointInPolygon(e.latlng, edges.map(coord => ({ latitude: coord[0], longitude: coord[1] })))) {
+            vertexMarkers.forEach(marker => marker.removeFrom(map));
+          }
+        });
       }
     }
   }
 }
+
 
 createZones(territories);
 let polygon = null;
