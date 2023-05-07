@@ -85,26 +85,40 @@ function setupPolygonInteractions(polygon, polygonName, edges) {
       longitude: e.latlng.lng
     };
 
+    // Get the updated edges from the territories object
+    const territoryKey = polygonName.replace(/Square.*/, '');
+    const squareKey = polygonName.replace(territoryKey, '');
+    const updatedEdges = territories[territoryKey][squareKey].edges;
+
     // Check if the click point is inside the polygon
-    const isInside = isPointInPolygon(point, edges.map(coord => ({ latitude: coord[0], longitude: coord[1] })));
+    const isInside = isPointInPolygon(point, updatedEdges.map(coord => ({ latitude: coord[0], longitude: coord[1] })));
 
     // If click is inside, print the variable name and its edges
     if (isInside) {
       console.clear();
       console.log(`Variable name: ${polygonName}`);
-      console.log(`Variable value (edges):`, edges);
+      console.log(`Variable value (edges):`, updatedEdges);
     }
   });
+
 
   // Function to update the polygon when a vertex is dragged
   function updatePolygon() {
     if (!isEditingEnabled) return;
     const newEdges = vertexMarkers.map(marker => {
       const latLng = marker.getLatLng().wrap();
-      return [latLng.lat, latLng.lng];
+      const roundedLat = parseFloat(latLng.lat.toFixed(5));
+      const roundedLng = parseFloat(latLng.lng.toFixed(5));
+      return [roundedLat, roundedLng];
     });
     polygon.setLatLngs(newEdges);
+  
+    // Update the edges in the territories object
+    const territoryKey = polygonName.replace(/Square.*/, '');
+    const squareKey = polygonName.replace(territoryKey, '');
+    territories[territoryKey][squareKey].edges = newEdges;
   }
+  
 
   // Create draggable markers for each vertex of the polygon
   const vertexMarkers = edges.map(coord => {
