@@ -172,7 +172,7 @@ function setMarkers(territories) {
     const iconTerrNum = terrNum;
     const iconTerr = L.divIcon({
       iconSize: null,
-      html: `<div class="map-label number"><div class="map-label-content">${iconTerrNum}</div><div class="map-label-arrow"></div></div>`,
+      html: `<div class="map-label number"><div class="map-label-content">${iconTerrNum}</div></div>`,
     });
     const terrMarkerInstance = L.marker(posTerrMarker, { icon: iconTerr }).addTo(map);
     markersMap[`${territoryKey}Marker`] = terrMarkerInstance;
@@ -185,7 +185,7 @@ function setMarkers(territories) {
         const posSquareMarker = new L.LatLng(squareMarker[0], squareMarker[1]);
         const iconSquare = L.divIcon({
           iconSize: null,
-          html: `<div class="map-label square"><div class="map-label-content">${squareLetter}</div><div class="map-label-arrow"></div></div>`,
+          html: `<div class="map-label square"><div class="map-label-content">${squareLetter}</div></div>`,
         });
         const squareMarkerInstance = L.marker(posSquareMarker, { icon: iconSquare }).addTo(map);
         markersMap[`${territoryKey}${squareKey}Marker`] = squareMarkerInstance;
@@ -374,11 +374,11 @@ function updateLabelStyles() {
 
   if (zoomLevel === 18) {
     territoryLabels.forEach(label => {
-      label.style.fontSize = "26px";
+      label.style.fontSize = "38px";
     });
 
     squareLabels.forEach(label => {
-      label.style.fontSize = "20px";
+      label.style.fontSize = "21px";
     });
   } else {
     territoryLabels.forEach(label => {
@@ -389,8 +389,24 @@ function updateLabelStyles() {
       label.style.fontSize = "12px";
     });
   }
+
+  // Hide square labels at minZoom
+  if (zoomLevel === 15) {
+    territoryLabels.forEach(label => {
+      label.style.fontSize = "18px";
+    });
+
+    squareLabels.forEach(squareLabel => {
+      squareLabel.style.display = 'none';
+    });
+  } else {
+    squareLabels.forEach(squareLabel => {
+      squareLabel.style.display = 'block';
+    });
+  }
 }
 
 map.on('zoomend', updateLabelStyles);
+
 
 document.getElementById('menuBtn').addEventListener('click', toggleMenu);

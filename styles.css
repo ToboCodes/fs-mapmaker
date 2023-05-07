@@ -226,3 +226,7 @@ html, body {
     margin: 0;
   }
   
+  .leaflet-marker-icon {
+    background: none !important;
+    border: none !important;
+  }
