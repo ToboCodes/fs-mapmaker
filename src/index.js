@@ -148,7 +148,6 @@ function setupPolygonInteractions(polygon, polygonName, edges) {
 }
 
 
-
 createZones(territories);
 
 for (const polygonName in polygonsMap) {
@@ -198,6 +197,48 @@ function setMarkers(territories) {
 
 setMarkers(territories);
 
+function generateJson() {
+  const output = {
+    base: {
+      edge1: [-39.603457, -73.038868],
+      edge2: [-39.808016, -72.774131],
+      center: [-39.66123, -72.95155]
+    },
+    territories: {}
+  };
+
+  for (const polygonName in polygonsMap) {
+    const polygon = polygonsMap[polygonName];
+    const territoryKey = polygonName.replace(/Square.*/, '');
+    const squareKey = polygonName.replace(territoryKey, '');
+
+    if (!output.territories[territoryKey]) {
+      output.territories[territoryKey] = {
+        color: polygon.options.color,
+        terrMarker: [],
+      };
+    }
+
+    const edges = polygon.getLatLngs()[0].map(coord => [parseFloat(coord.lat.toFixed(5)), parseFloat(coord.lng.toFixed(5))]);
+    output.territories[territoryKey][squareKey] = {
+      edges: edges,
+      squareMarker: []
+    };
+  }
+
+  return output;
+}
+
+document.getElementById("downloadMap").addEventListener("click", function() {
+  const data = generateJson();
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
+  const downloadAnchorNode = document.createElement("a");
+  downloadAnchorNode.setAttribute("href", dataStr);
+  downloadAnchorNode.setAttribute("download", "map_data.json");
+  document.body.appendChild(downloadAnchorNode);
+  downloadAnchorNode.click();
+  downloadAnchorNode.remove();
+});
 
 
 // Enable device GPS
