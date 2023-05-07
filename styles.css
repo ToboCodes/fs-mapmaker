@@ -230,3 +230,25 @@ html, body {
     background: none !important;
     border: none !important;
   }
+
+  .context-menu {
+    position: absolute;
+    background-color: white;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    z-index: 10000;
+    display: none;
+  }
+  
+  .context-menu-btn {
+    padding: 10px 15px;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+  }
+  
+  .context-menu-btn:hover {
+    background-color: #f0f0f0;
+  }
+  

@@ -76,8 +76,39 @@ function createZones(territories) {
 }
 
 function setupPolygonInteractions(polygon, polygonName, edges) {
-  // Add click event listener to the polygon
+  // Create the edit menu button
+  const editMenuBtn = L.DomUtil.create('div', 'map-menu-btn');
+  editMenuBtn.innerHTML = '<i class="fa-solid fa-pen"></i>';
+
+  // Create a map control for the edit menu button
+  const editMenuControl = L.Control.extend({
+    options: {
+      position: 'topleft'
+    },
+
+    onAdd: function () {
+      return editMenuBtn;
+    }
+  });
+
+  let editMenuInstance = null;
+
   polygon.on('click', (e) => {
+    if (!isEditingEnabled) return;
+  
+    if (editMenuInstance === null) {
+      editMenuInstance = new editMenuControl().addTo(map);
+    }
+  
+    // Position the edit button at the click position
+    const clickPos = map.mouseEventToContainerPoint(e.originalEvent);
+    editMenuBtn.style.left = clickPos.x + 'px';
+    editMenuBtn.style.top = clickPos.y + 'px';
+  
+    editMenuBtn.style.display = 'block';
+  });
+
+  map.on('click', (e) => {
     if (!isEditingEnabled) return;
 
     const point = {
@@ -85,24 +116,28 @@ function setupPolygonInteractions(polygon, polygonName, edges) {
       longitude: e.latlng.lng
     };
 
-    // Get the updated edges from the territories object
+    const isInside = isPointInPolygon(point, edges.map(coord => ({ latitude: coord[0], longitude: coord[1] })));
+    if (!isInside) {
+      editMenuBtn.style.display = 'none';
+    }
+  });
+
+  editMenuBtn.addEventListener('click', () => {
+    printPolygonInfo();
+    toggleVertexMarkers();
+    editMenuBtn.style.display = 'none';
+  });
+
+  function printPolygonInfo() {
     const territoryKey = polygonName.replace(/Square.*/, '');
     const squareKey = polygonName.replace(territoryKey, '');
     const updatedEdges = territories[territoryKey][squareKey].edges;
 
-    // Check if the click point is inside the polygon
-    const isInside = isPointInPolygon(point, updatedEdges.map(coord => ({ latitude: coord[0], longitude: coord[1] })));
+    console.clear();
+    console.log(`Variable name: ${polygonName}`);
+    console.log(`Variable value (edges):`, updatedEdges);
+  }
 
-    // If click is inside, print the variable name and its edges
-    if (isInside) {
-      console.clear();
-      console.log(`Variable name: ${polygonName}`);
-      console.log(`Variable value (edges):`, updatedEdges);
-    }
-  });
-
-
-  // Function to update the polygon when a vertex is dragged
   function updatePolygon() {
     if (!isEditingEnabled) return;
     const newEdges = vertexMarkers.map(marker => {
@@ -112,40 +147,41 @@ function setupPolygonInteractions(polygon, polygonName, edges) {
       return [roundedLat, roundedLng];
     });
     polygon.setLatLngs(newEdges);
-  
-    // Update the edges in the territories object
+
     const territoryKey = polygonName.replace(/Square.*/, '');
     const squareKey = polygonName.replace(territoryKey, '');
     territories[territoryKey][squareKey].edges = newEdges;
   }
-  
 
-  // Create draggable markers for each vertex of the polygon
   const vertexMarkers = edges.map(coord => {
     const marker = L.marker(coord, { draggable: true, zIndexOffset: 1000 }).addTo(map);
 
-    // Update the polygon when a vertex marker is dragged
     marker.on('drag', updatePolygon);
 
     return marker;
   });
 
-  // Hide the vertex markers by default
-  vertexMarkers.forEach(marker => marker.removeFrom(map));
-
-  // Show the vertex markers when the polygon is clicked
-  polygon.on('click', () => {
-    if (!isEditingEnabled) return;
+  function showVertexMarkers() {
     vertexMarkers.forEach(marker => marker.addTo(map));
-  });
+  }
 
-  // Hide the vertex markers when clicking outside the polygon
-  map.on('click', (e) => {
-    if (!isPointInPolygon(e.latlng, edges.map(coord => ({ latitude: coord[0], longitude: coord[1] })))) {
-      vertexMarkers.forEach(marker => marker.removeFrom(map));
+  function hideVertexMarkers() {
+    vertexMarkers.forEach(marker => marker.removeFrom(map));
+  }
+
+  function toggleVertexMarkers() {
+    if (!map.hasLayer(vertexMarkers[0])) {
+      showVertexMarkers();
+    } else {
+      hideVertexMarkers();
     }
-  });
+  }
+  
+
+  hideVertexMarkers();
 }
+
+  
 
 
 createZones(territories);
