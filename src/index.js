@@ -158,7 +158,6 @@ for (const polygonName in polygonsMap) {
   setupPolygonInteractions(polygon, polygonName, edges);
 }
 
-
 // Set Markers function
 const markersMap = {};
 
@@ -251,6 +250,63 @@ document.getElementById("downloadMap").addEventListener("click", function() {
   downloadAnchorNode.remove();
 });
 
+// Territory list
+function populateTerritoriesList() {
+  const territoriesList = document.getElementById("territoriesList");
+
+  for (const territoryKey in territories) {
+    const listItem = document.createElement("li");
+    listItem.className = "menu-item";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.id = territoryKey + "Checkbox";
+    checkbox.checked = true;
+    listItem.appendChild(checkbox);
+
+    const label = document.createElement("label");
+    label.htmlFor = territoryKey + "Checkbox";
+    label.textContent = "Territorio " + territoryKey.match(/\d+/)[0];
+    listItem.appendChild(label);
+
+    territoriesList.appendChild(listItem);
+
+    // Add event listener to control territory visibility
+    checkbox.addEventListener("change", function (e) {
+      const territory = territories[territoryKey];
+      for (const squareKey in territory) {
+        if (squareKey.startsWith("Square")) {
+          if (e.target.checked) {
+            polygonsMap[territoryKey + squareKey].addTo(map);
+            markersMap[territoryKey + squareKey + "Marker"].addTo(map);
+          } else {
+            polygonsMap[territoryKey + squareKey].removeFrom(map);
+            markersMap[territoryKey + squareKey + "Marker"].removeFrom(map);
+          }
+        }
+      }
+    });
+  }
+}
+
+populateTerritoriesList();
+
+// Toggle territories menu option
+function toggleTerritoriesMenu() {
+  const menu = document.getElementById("menu");
+  const territoriesMenu = document.getElementById("territoriesMenu");
+
+  if (menu.style.display === "block") {
+    menu.style.display = "none";
+    territoriesMenu.style.display = "block";
+  } else {
+    menu.style.display = "block";
+    territoriesMenu.style.display = "none";
+  }
+}
+
+document.getElementById("togglePolygons").addEventListener("click", toggleTerritoriesMenu);
+
 
 // Enable device GPS
 map.locate({
@@ -296,13 +352,45 @@ let menuVisible = false;
 const menu = document.getElementById('menu');
 
 function toggleMenu() {
-  if (!menuVisible) {
-    menu.style.display = 'block';
+  const menu = document.getElementById("menu");
+  const territoriesMenu = document.getElementById("territoriesMenu");
+
+  if (territoriesMenu.style.display === "block") {
+    territoriesMenu.style.display = "none";
+  } else if (!menuVisible) {
+    menu.style.display = "block";
     menuVisible = true;
   } else {
-    menu.style.display = 'none';
+    menu.style.display = "none";
     menuVisible = false;
   }
 }
+
+// Zoom level format
+function updateLabelStyles() {
+  const zoomLevel = map.getZoom();
+  const territoryLabels = document.querySelectorAll(".map-label.number");
+  const squareLabels = document.querySelectorAll(".map-label.square");
+
+  if (zoomLevel === 18) {
+    territoryLabels.forEach(label => {
+      label.style.fontSize = "26px";
+    });
+
+    squareLabels.forEach(label => {
+      label.style.fontSize = "20px";
+    });
+  } else {
+    territoryLabels.forEach(label => {
+      label.style.fontSize = "21px";
+    });
+
+    squareLabels.forEach(label => {
+      label.style.fontSize = "12px";
+    });
+  }
+}
+
+map.on('zoomend', updateLabelStyles);
 
 document.getElementById('menuBtn').addEventListener('click', toggleMenu);
