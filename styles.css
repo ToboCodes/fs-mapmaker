@@ -252,20 +252,15 @@ html, body {
     background-color: #f0f0f0;
   }
   
-  .midpoint-icon {
-    width: 16px;
-    height: 16px;
+  .midpoint-icon-content {
+    color: white;
+    font-size: 11px;
+    line-height: 1;
     background-color: grey;
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
     cursor: pointer;
-  }
-  
-  .midpoint-icon-content {
-    color: white;
-    font-size: 12px;
-    line-height: 1;
   }
   

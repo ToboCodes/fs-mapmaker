@@ -147,9 +147,6 @@ function setupPolygonInteractions(polygon, polygonName, edges) {
     editMenuBtn.style.top = clickPos.y + 'px';
   
     editMenuBtn.style.display = 'block';
-  
-    // Create midpoint markers
-    createMidpointMarkers();
   });
 
   map.on('click', (e) => {
@@ -169,6 +166,7 @@ function setupPolygonInteractions(polygon, polygonName, edges) {
   editMenuBtn.addEventListener('click', () => {
     printPolygonInfo();
     toggleVertexMarkers();
+    createMidpointMarkers();
     editMenuBtn.style.display = 'none';
   });
 
