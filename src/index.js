@@ -51,6 +51,14 @@ document.getElementById("satelliteToggle").addEventListener("change", function (
 // Add event listener to toggle map editing
 document.getElementById("editToggle").addEventListener("change", function (e) {
   isEditingEnabled = e.target.checked;
+
+  if (!isEditingEnabled) {
+    for (const polygonName in polygonInteractions) {
+      // Use the hide functions stored in the polygonInteractions object.
+      polygonInteractions[polygonName].hideVertexMarkers();
+      polygonInteractions[polygonName].hideMidpointMarkers();
+    }
+  }
 });
 
 
@@ -81,6 +89,8 @@ function calculateMidpoint(point1, point2) {
     (point1[1] + point2[1]) / 2
   ];
 }
+
+const polygonInteractions = {};
 
 function setupPolygonInteractions(polygon, polygonName, edges) {
   // Create the edit menu button
@@ -143,8 +153,8 @@ function setupPolygonInteractions(polygon, polygonName, edges) {
   
     // Position the edit button at the click position
     const clickPos = map.mouseEventToContainerPoint(e.originalEvent);
-    editMenuBtn.style.left = clickPos.x + 'px';
-    editMenuBtn.style.top = clickPos.y + 'px';
+    editMenuBtn.style.left = (clickPos.x - 30) + 'px';
+    editMenuBtn.style.top = (clickPos.y - 100) + 'px';
   
     editMenuBtn.style.display = 'block';
   });
@@ -160,6 +170,8 @@ function setupPolygonInteractions(polygon, polygonName, edges) {
     const isInside = isPointInPolygon(point, edges.map(coord => ({ latitude: coord[0], longitude: coord[1] })));
     if (!isInside) {
       editMenuBtn.style.display = 'none';
+      hideVertexMarkers();
+      hideMidpointMarkers();
     }
   });
 
@@ -212,6 +224,10 @@ function setupPolygonInteractions(polygon, polygonName, edges) {
     vertexMarkers.forEach(marker => marker.removeFrom(map));
   }
 
+  function hideMidpointMarkers() {
+    midpointMarkers.forEach(marker => marker.removeFrom(map));
+  }
+
   function toggleVertexMarkers() {
     if (!map.hasLayer(vertexMarkers[0])) {
       showVertexMarkers();
@@ -219,9 +235,16 @@ function setupPolygonInteractions(polygon, polygonName, edges) {
       hideVertexMarkers();
     }
   }
-  
 
   hideVertexMarkers();
+
+  // Store the hide functions and markers in the polygonInteractions object.
+  polygonInteractions[polygonName] = {
+    hideVertexMarkers: hideVertexMarkers,
+    hideMidpointMarkers: hideMidpointMarkers,
+    vertexMarkers: vertexMarkers,
+    midpointMarkers: midpointMarkers,
+  };
 }
 
 createZones(territories);
