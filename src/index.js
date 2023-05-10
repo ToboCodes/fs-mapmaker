@@ -75,6 +75,13 @@ function createZones(territories) {
   }
 }
 
+function calculateMidpoint(point1, point2) {
+  return [
+    (point1[0] + point2[0]) / 2,
+    (point1[1] + point2[1]) / 2
+  ];
+}
+
 function setupPolygonInteractions(polygon, polygonName, edges) {
   // Create the edit menu button
   const editMenuBtn = L.DomUtil.create('div', 'map-menu-btn');
@@ -93,6 +100,40 @@ function setupPolygonInteractions(polygon, polygonName, edges) {
 
   let editMenuInstance = null;
 
+  let midpointMarkers = [];
+
+  function createMidpointMarkers() {
+    // Remove old midpoint markers
+    midpointMarkers.forEach(marker => marker.removeFrom(map));
+    midpointMarkers = [];
+
+    // Create new midpoint markers
+    const latLngs = polygon.getLatLngs()[0];
+    for (let i = 0; i < latLngs.length; i++) {
+      const nextIndex = (i + 1) === latLngs.length ? 0 : (i + 1);
+      const midpoint = calculateMidpoint([latLngs[i].lat, latLngs[i].lng], [latLngs[nextIndex].lat, latLngs[nextIndex].lng]);
+
+      const marker = L.marker(midpoint, {
+        icon: L.divIcon({
+          className: 'midpoint-icon',
+          iconSize: [10, 10],
+          html: '<div class="midpoint-icon-content">+</div>'
+        }),
+        draggable: false
+      }).addTo(map);
+
+      marker.on('click', () => {
+        marker.removeFrom(map);
+        const newMarker = L.marker(marker.getLatLng(), { draggable: true, zIndexOffset: 1000 }).addTo(map);
+        newMarker.on('drag', updatePolygon);
+        vertexMarkers.splice(i + 1, 0, newMarker);
+        updatePolygon();
+      });
+
+      midpointMarkers.push(marker);
+    }
+  }
+
   polygon.on('click', (e) => {
     if (!isEditingEnabled) return;
   
@@ -106,6 +147,9 @@ function setupPolygonInteractions(polygon, polygonName, edges) {
     editMenuBtn.style.top = clickPos.y + 'px';
   
     editMenuBtn.style.display = 'block';
+  
+    // Create midpoint markers
+    createMidpointMarkers();
   });
 
   map.on('click', (e) => {
@@ -151,6 +195,7 @@ function setupPolygonInteractions(polygon, polygonName, edges) {
     const territoryKey = polygonName.replace(/Square.*/, '');
     const squareKey = polygonName.replace(territoryKey, '');
     territories[territoryKey][squareKey].edges = newEdges;
+    createMidpointMarkers();
   }
 
   const vertexMarkers = edges.map(coord => {
@@ -181,10 +226,8 @@ function setupPolygonInteractions(polygon, polygonName, edges) {
   hideVertexMarkers();
 }
 
-  
-
-
 createZones(territories);
+
 
 for (const polygonName in polygonsMap) {
   const polygon = polygonsMap[polygonName];
@@ -327,6 +370,7 @@ function populateTerritoriesList() {
 
 populateTerritoriesList();
 
+
 // Toggle territories menu option
 function toggleTerritoriesMenu() {
   const menu = document.getElementById("menu");
@@ -442,7 +486,7 @@ function updateLabelStyles() {
   }
 }
 
-map.on('zoomend', updateLabelStyles);
 
+map.on('zoomend', updateLabelStyles);
 
 document.getElementById('menuBtn').addEventListener('click', toggleMenu);
