@@ -379,9 +379,12 @@ function populateTerritoriesList() {
           if (e.target.checked) {
             polygonsMap[territoryKey + squareKey].addTo(map);
             markersMap[territoryKey + squareKey + "Marker"].addTo(map);
+            markersMap[territoryKey + "Marker"].addTo(map);
+            updateLabelStyles()
           } else {
             polygonsMap[territoryKey + squareKey].removeFrom(map);
             markersMap[territoryKey + squareKey + "Marker"].removeFrom(map);
+            markersMap[territoryKey + "Marker"].removeFrom(map);
           }
         }
       }
