@@ -92,7 +92,7 @@ function calculateMidpoint(point1, point2) {
 
 const polygonInteractions = {};
 
-function setupPolygonInteractions(polygon, polygonName, edges) {
+function createEditMenuButton() {
   // Create the edit menu button
   const editMenuBtn = L.DomUtil.create('div', 'map-menu-btn');
   editMenuBtn.innerHTML = '<i class="fa-solid fa-pen"></i>';
@@ -109,56 +109,58 @@ function setupPolygonInteractions(polygon, polygonName, edges) {
   });
 
   let editMenuInstance = null;
+  return { editMenuBtn, editMenuControl, editMenuInstance };
+}
 
-  let midpointMarkers = [];
+function handleMidpointMarkers(polygon, map, vertexMarkers, midpointMarkers) {
+  // Function body from createMidpointMarkers method with some modifications
+  midpointMarkers.forEach(marker => marker.removeFrom(map));
+  midpointMarkers = [];
 
-  function createMidpointMarkers() {
-    // Remove old midpoint markers
-    midpointMarkers.forEach(marker => marker.removeFrom(map));
-    midpointMarkers = [];
+  const latLngs = polygon.getLatLngs()[0];
+  for (let i = 0; i < latLngs.length; i++) {
+    const nextIndex = (i + 1) === latLngs.length ? 0 : (i + 1);
+    const midpoint = calculateMidpoint([latLngs[i].lat, latLngs[i].lng], [latLngs[nextIndex].lat, latLngs[nextIndex].lng]);
 
-    // Create new midpoint markers
-    const latLngs = polygon.getLatLngs()[0];
-    for (let i = 0; i < latLngs.length; i++) {
-      const nextIndex = (i + 1) === latLngs.length ? 0 : (i + 1);
-      const midpoint = calculateMidpoint([latLngs[i].lat, latLngs[i].lng], [latLngs[nextIndex].lat, latLngs[nextIndex].lng]);
+    const marker = L.marker(midpoint, {
+      icon: L.divIcon({
+        className: 'midpoint-icon',
+        iconSize: [10, 10],
+        html: '<div class="midpoint-icon-content">+</div>'
+      }),
+      draggable: false
+    }).addTo(map);
 
-      const marker = L.marker(midpoint, {
-        icon: L.divIcon({
-          className: 'midpoint-icon',
-          iconSize: [10, 10],
-          html: '<div class="midpoint-icon-content">+</div>'
-        }),
-        draggable: false
-      }).addTo(map);
+    marker.on('click', () => {
+      marker.removeFrom(map);
+      const newMarker = L.marker(marker.getLatLng(), { draggable: true, zIndexOffset: 1000 }).addTo(map);
+      newMarker.on('drag', updatePolygon);
+      vertexMarkers.splice(i + 1, 0, newMarker);
+      updatePolygon();
+    });
 
-      marker.on('click', () => {
-        marker.removeFrom(map);
-        const newMarker = L.marker(marker.getLatLng(), { draggable: true, zIndexOffset: 1000 }).addTo(map);
-        newMarker.on('drag', updatePolygon);
-        vertexMarkers.splice(i + 1, 0, newMarker);
-        updatePolygon();
-      });
-
-      midpointMarkers.push(marker);
-    }
+    midpointMarkers.push(marker);
   }
+}
 
+function handlePolygonClick(polygon, isEditingEnabled, editMenuControl, editMenuInstance, editMenuBtn, map) {
   polygon.on('click', (e) => {
     if (!isEditingEnabled) return;
-  
+
     if (editMenuInstance === null) {
       editMenuInstance = new editMenuControl().addTo(map);
     }
-  
+
     // Position the edit button at the click position
     const clickPos = map.mouseEventToContainerPoint(e.originalEvent);
     editMenuBtn.style.left = (clickPos.x - 30) + 'px';
     editMenuBtn.style.top = (clickPos.y - 100) + 'px';
-  
+
     editMenuBtn.style.display = 'block';
   });
+}
 
+function handleMapClick(map, isEditingEnabled, editMenuBtn, hideVertexMarkers, hideMidpointMarkers, edges) {
   map.on('click', (e) => {
     if (!isEditingEnabled) return;
 
@@ -174,60 +176,63 @@ function setupPolygonInteractions(polygon, polygonName, edges) {
       hideMidpointMarkers();
     }
   });
+}
 
+
+function handleEditButtonClick() {
+  // Function to define the actions when the edit button is clicked.
   editMenuBtn.addEventListener('click', () => {
     printPolygonInfo();
     toggleVertexMarkers();
     createMidpointMarkers();
     editMenuBtn.style.display = 'none';
   });
+}
 
-  function printPolygonInfo() {
-    const territoryKey = polygonName.replace(/Square.*/, '');
-    const squareKey = polygonName.replace(territoryKey, '');
-    const updatedEdges = territories[territoryKey][squareKey].edges;
+function printPolygonInfo() {
+  // Function to print polygon info.
+  const territoryKey = polygonName.replace(/Square.*/, '');
+  const squareKey = polygonName.replace(territoryKey, '');
+  const updatedEdges = territories[territoryKey][squareKey].edges;
 
-    console.clear();
-    console.log(`Variable name: ${polygonName}`);
-    console.log(`Variable value (edges):`, updatedEdges);
-  }
+  console.clear();
+  console.log(`Variable name: ${polygonName}`);
+  console.log(`Variable value (edges):`, updatedEdges);
+}
 
-  function updatePolygon() {
-    if (!isEditingEnabled) return;
-    const newEdges = vertexMarkers.map(marker => {
-      const latLng = marker.getLatLng().wrap();
-      const roundedLat = parseFloat(latLng.lat.toFixed(5));
-      const roundedLng = parseFloat(latLng.lng.toFixed(5));
-      return [roundedLat, roundedLng];
-    });
-    polygon.setLatLngs(newEdges);
+function updatePolygon() {
+  // Function to update the polygon upon certain interactions.
+  if (!isEditingEnabled) return;
+  const newEdges = vertexMarkers.map(marker => {
+    const latLng = marker.getLatLng().wrap();
+    const roundedLat = parseFloat(latLng.lat.toFixed(5));
+    const roundedLng = parseFloat(latLng.lng.toFixed(5));
+    return [roundedLat, roundedLng];
+  });
+  polygon.setLatLngs(newEdges);
 
-    const territoryKey = polygonName.replace(/Square.*/, '');
-    const squareKey = polygonName.replace(territoryKey, '');
-    territories[territoryKey][squareKey].edges = newEdges;
-    createMidpointMarkers();
-  }
+  const territoryKey = polygonName.replace(/Square.*/, '');
+  const squareKey = polygonName.replace(territoryKey, '');
+  territories[territoryKey][squareKey].edges = newEdges;
+  createMidpointMarkers();
+}
 
+function handleVertexMarkers() {
+  // Function to create vertex markers and their interactions.
   const vertexMarkers = edges.map(coord => {
     const marker = L.marker(coord, { draggable: true, zIndexOffset: 1000 }).addTo(map);
-
     marker.on('drag', updatePolygon);
-
     return marker;
   });
-
+  
   function showVertexMarkers() {
     vertexMarkers.forEach(marker => marker.addTo(map));
   }
-
+  
   function hideVertexMarkers() {
     vertexMarkers.forEach(marker => marker.removeFrom(map));
   }
-
-  function hideMidpointMarkers() {
-    midpointMarkers.forEach(marker => marker.removeFrom(map));
-  }
-
+  
   function toggleVertexMarkers() {
     if (!map.hasLayer(vertexMarkers[0])) {
       showVertexMarkers();
@@ -235,10 +240,31 @@ function setupPolygonInteractions(polygon, polygonName, edges) {
       hideVertexMarkers();
     }
   }
-
+  
   hideVertexMarkers();
+}
 
-  // Store the hide functions and markers in the polygonInteractions object.
+function showVertexMarkers(vertexMarkers, map) {
+  vertexMarkers.forEach(marker => marker.addTo(map));
+}
+
+function hideVertexMarkers(vertexMarkers) {
+  vertexMarkers.forEach(marker => marker.removeFrom(map));
+}
+
+function toggleVertexMarkers(vertexMarkers, map) {
+  if (!map.hasLayer(vertexMarkers[0])) {
+    showVertexMarkers(vertexMarkers, map);
+  } else {
+    hideVertexMarkers(vertexMarkers);
+  }
+}
+
+function hideMidpointMarkers(midpointMarkers, map) {
+  midpointMarkers.forEach(marker => marker.removeFrom(map));
+}
+
+function storePolygonInteractions(polygonName, hideVertexMarkers, hideMidpointMarkers, vertexMarkers, midpointMarkers, polygonInteractions) {
   polygonInteractions[polygonName] = {
     hideVertexMarkers: hideVertexMarkers,
     hideMidpointMarkers: hideMidpointMarkers,
@@ -246,6 +272,25 @@ function setupPolygonInteractions(polygon, polygonName, edges) {
     midpointMarkers: midpointMarkers,
   };
 }
+
+
+function setupPolygonInteractions(polygon, polygonName, edges) {
+  // Calls the functions defined above.
+  createEditMenuButton();
+  handleMidpointMarkers();
+  handlePolygonClick();
+  handleMapClick();
+  handleEditButtonClick();
+  printPolygonInfo();
+  updatePolygon();
+  handleVertexMarkers();
+  showVertexMarkers();
+  hideVertexMarkers();
+  toggleVertexMarkers();
+  hideMidpointMarkers();
+  storePolygonInteractions();
+}
+
 
 createZones(territories);
 
