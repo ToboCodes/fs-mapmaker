@@ -92,7 +92,7 @@ function calculateMidpoint(point1, point2) {
 
 const polygonInteractions = {};
 
-function createEditMenuButton() {
+function setupPolygonInteractions(polygon, polygonName, edges) {
   // Create the edit menu button
   const editMenuBtn = L.DomUtil.create('div', 'map-menu-btn');
   editMenuBtn.innerHTML = '<i class="fa-solid fa-pen"></i>';
@@ -109,58 +109,56 @@ function createEditMenuButton() {
   });
 
   let editMenuInstance = null;
-  return { editMenuBtn, editMenuControl, editMenuInstance };
-}
 
-function handleMidpointMarkers(polygon, map, vertexMarkers, midpointMarkers) {
-  // Function body from createMidpointMarkers method with some modifications
-  midpointMarkers.forEach(marker => marker.removeFrom(map));
-  midpointMarkers = [];
+  let midpointMarkers = [];
 
-  const latLngs = polygon.getLatLngs()[0];
-  for (let i = 0; i < latLngs.length; i++) {
-    const nextIndex = (i + 1) === latLngs.length ? 0 : (i + 1);
-    const midpoint = calculateMidpoint([latLngs[i].lat, latLngs[i].lng], [latLngs[nextIndex].lat, latLngs[nextIndex].lng]);
+  function createMidpointMarkers() {
+    // Remove old midpoint markers
+    midpointMarkers.forEach(marker => marker.removeFrom(map));
+    midpointMarkers = [];
 
-    const marker = L.marker(midpoint, {
-      icon: L.divIcon({
-        className: 'midpoint-icon',
-        iconSize: [10, 10],
-        html: '<div class="midpoint-icon-content">+</div>'
-      }),
-      draggable: false
-    }).addTo(map);
+    // Create new midpoint markers
+    const latLngs = polygon.getLatLngs()[0];
+    for (let i = 0; i < latLngs.length; i++) {
+      const nextIndex = (i + 1) === latLngs.length ? 0 : (i + 1);
+      const midpoint = calculateMidpoint([latLngs[i].lat, latLngs[i].lng], [latLngs[nextIndex].lat, latLngs[nextIndex].lng]);
 
-    marker.on('click', () => {
-      marker.removeFrom(map);
-      const newMarker = L.marker(marker.getLatLng(), { draggable: true, zIndexOffset: 1000 }).addTo(map);
-      newMarker.on('drag', updatePolygon);
-      vertexMarkers.splice(i + 1, 0, newMarker);
-      updatePolygon();
-    });
+      const marker = L.marker(midpoint, {
+        icon: L.divIcon({
+          className: 'midpoint-icon',
+          iconSize: [10, 10],
+          html: '<div class="midpoint-icon-content">+</div>'
+        }),
+        draggable: false
+      }).addTo(map);
 
-    midpointMarkers.push(marker);
+      marker.on('click', () => {
+        marker.removeFrom(map);
+        const newMarker = L.marker(marker.getLatLng(), { draggable: true, zIndexOffset: 1000 }).addTo(map);
+        newMarker.on('drag', updatePolygon);
+        vertexMarkers.splice(i + 1, 0, newMarker);
+        updatePolygon();
+      });
+
+      midpointMarkers.push(marker);
+    }
   }
-}
 
-function handlePolygonClick(polygon, isEditingEnabled, editMenuControl, editMenuInstance, editMenuBtn, map) {
   polygon.on('click', (e) => {
     if (!isEditingEnabled) return;
-
+  
     if (editMenuInstance === null) {
       editMenuInstance = new editMenuControl().addTo(map);
     }
-
+  
     // Position the edit button at the click position
     const clickPos = map.mouseEventToContainerPoint(e.originalEvent);
     editMenuBtn.style.left = (clickPos.x - 30) + 'px';
     editMenuBtn.style.top = (clickPos.y - 100) + 'px';
-
+  
     editMenuBtn.style.display = 'block';
   });
-}
 
-function handleMapClick(map, isEditingEnabled, editMenuBtn, hideVertexMarkers, hideMidpointMarkers, edges) {
   map.on('click', (e) => {
     if (!isEditingEnabled) return;
 
@@ -176,63 +174,60 @@ function handleMapClick(map, isEditingEnabled, editMenuBtn, hideVertexMarkers, h
       hideMidpointMarkers();
     }
   });
-}
 
-
-function handleEditButtonClick() {
-  // Function to define the actions when the edit button is clicked.
   editMenuBtn.addEventListener('click', () => {
     printPolygonInfo();
     toggleVertexMarkers();
     createMidpointMarkers();
     editMenuBtn.style.display = 'none';
   });
-}
 
-function printPolygonInfo() {
-  // Function to print polygon info.
-  const territoryKey = polygonName.replace(/Square.*/, '');
-  const squareKey = polygonName.replace(territoryKey, '');
-  const updatedEdges = territories[territoryKey][squareKey].edges;
+  function printPolygonInfo() {
+    const territoryKey = polygonName.replace(/Square.*/, '');
+    const squareKey = polygonName.replace(territoryKey, '');
+    const updatedEdges = territories[territoryKey][squareKey].edges;
 
-  console.clear();
-  console.log(`Variable name: ${polygonName}`);
-  console.log(`Variable value (edges):`, updatedEdges);
-}
+    console.clear();
+    console.log(`Variable name: ${polygonName}`);
+    console.log(`Variable value (edges):`, updatedEdges);
+  }
 
-function updatePolygon() {
-  // Function to update the polygon upon certain interactions.
-  if (!isEditingEnabled) return;
-  const newEdges = vertexMarkers.map(marker => {
-    const latLng = marker.getLatLng().wrap();
-    const roundedLat = parseFloat(latLng.lat.toFixed(5));
-    const roundedLng = parseFloat(latLng.lng.toFixed(5));
-    return [roundedLat, roundedLng];
-  });
-  polygon.setLatLngs(newEdges);
+  function updatePolygon() {
+    if (!isEditingEnabled) return;
+    const newEdges = vertexMarkers.map(marker => {
+      const latLng = marker.getLatLng().wrap();
+      const roundedLat = parseFloat(latLng.lat.toFixed(5));
+      const roundedLng = parseFloat(latLng.lng.toFixed(5));
+      return [roundedLat, roundedLng];
+    });
+    polygon.setLatLngs(newEdges);
 
-  const territoryKey = polygonName.replace(/Square.*/, '');
-  const squareKey = polygonName.replace(territoryKey, '');
-  territories[territoryKey][squareKey].edges = newEdges;
-  createMidpointMarkers();
-}
+    const territoryKey = polygonName.replace(/Square.*/, '');
+    const squareKey = polygonName.replace(territoryKey, '');
+    territories[territoryKey][squareKey].edges = newEdges;
+    createMidpointMarkers();
+  }
 
-function handleVertexMarkers() {
-  // Function to create vertex markers and their interactions.
   const vertexMarkers = edges.map(coord => {
     const marker = L.marker(coord, { draggable: true, zIndexOffset: 1000 }).addTo(map);
+
     marker.on('drag', updatePolygon);
+
     return marker;
   });
-  
+
   function showVertexMarkers() {
     vertexMarkers.forEach(marker => marker.addTo(map));
   }
-  
+
   function hideVertexMarkers() {
     vertexMarkers.forEach(marker => marker.removeFrom(map));
   }
-  
+
+  function hideMidpointMarkers() {
+    midpointMarkers.forEach(marker => marker.removeFrom(map));
+  }
+
   function toggleVertexMarkers() {
     if (!map.hasLayer(vertexMarkers[0])) {
       showVertexMarkers();
@@ -240,31 +235,10 @@ function handleVertexMarkers() {
       hideVertexMarkers();
     }
   }
-  
+
   hideVertexMarkers();
-}
 
-function showVertexMarkers(vertexMarkers, map) {
-  vertexMarkers.forEach(marker => marker.addTo(map));
-}
-
-function hideVertexMarkers(vertexMarkers) {
-  vertexMarkers.forEach(marker => marker.removeFrom(map));
-}
-
-function toggleVertexMarkers(vertexMarkers, map) {
-  if (!map.hasLayer(vertexMarkers[0])) {
-    showVertexMarkers(vertexMarkers, map);
-  } else {
-    hideVertexMarkers(vertexMarkers);
-  }
-}
-
-function hideMidpointMarkers(midpointMarkers, map) {
-  midpointMarkers.forEach(marker => marker.removeFrom(map));
-}
-
-function storePolygonInteractions(polygonName, hideVertexMarkers, hideMidpointMarkers, vertexMarkers, midpointMarkers, polygonInteractions) {
+  // Store the hide functions and markers in the polygonInteractions object.
   polygonInteractions[polygonName] = {
     hideVertexMarkers: hideVertexMarkers,
     hideMidpointMarkers: hideMidpointMarkers,
@@ -272,25 +246,6 @@ function storePolygonInteractions(polygonName, hideVertexMarkers, hideMidpointMa
     midpointMarkers: midpointMarkers,
   };
 }
-
-
-function setupPolygonInteractions(polygon, polygonName, edges) {
-  // Calls the functions defined above.
-  createEditMenuButton();
-  handleMidpointMarkers();
-  handlePolygonClick();
-  handleMapClick();
-  handleEditButtonClick();
-  printPolygonInfo();
-  updatePolygon();
-  handleVertexMarkers();
-  showVertexMarkers();
-  hideVertexMarkers();
-  toggleVertexMarkers();
-  hideMidpointMarkers();
-  storePolygonInteractions();
-}
-
 
 createZones(territories);
 
@@ -341,122 +296,6 @@ function setMarkers(territories) {
 
 setMarkers(territories);
 
-// Save map JSON function
-function generateJson() {
-  const output = {
-    base: {
-      edge1: coords.base.edge1,
-      edge2: coords.base.edge2,
-      center: coords.base.center
-    },
-    territories: {}
-  };
-
-  for (const polygonName in polygonsMap) {
-    const polygon = polygonsMap[polygonName];
-    const territoryKey = polygonName.replace(/Square.*/, '');
-    const squareKey = polygonName.replace(territoryKey, '');
-    const edges = polygon.getLatLngs()[0].map(coord => [
-      parseFloat(coord.lat.toFixed(5)),
-      parseFloat(coord.lng.toFixed(5))
-    ]);
-
-    if (!output.territories[territoryKey]) {
-      output.territories[territoryKey] = {
-        color: polygon.options.color,
-        terrMarker: [
-          parseFloat(markersMap[`${territoryKey}Marker`].getLatLng().lat.toFixed(5)),
-          parseFloat(markersMap[`${territoryKey}Marker`].getLatLng().lng.toFixed(5))
-        ],
-      };
-    }
-
-    output.territories[territoryKey][squareKey] = {
-      edges: edges,
-      squareMarker: [
-        parseFloat(markersMap[`${territoryKey}${squareKey}Marker`].getLatLng().lat.toFixed(5)),
-        parseFloat(markersMap[`${territoryKey}${squareKey}Marker`].getLatLng().lng.toFixed(5))
-      ]
-    };
-  }
-
-  return output;
-}
-
-
-document.getElementById("downloadMap").addEventListener("click", function() {
-  const data = generateJson();
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
-  const downloadAnchorNode = document.createElement("a");
-  downloadAnchorNode.setAttribute("href", dataStr);
-  downloadAnchorNode.setAttribute("download", "territorios.json");
-  document.body.appendChild(downloadAnchorNode);
-  downloadAnchorNode.click();
-  downloadAnchorNode.remove();
-});
-
-// Territory list
-function populateTerritoriesList() {
-  const territoriesList = document.getElementById("territoriesList");
-
-  for (const territoryKey in territories) {
-    const listItem = document.createElement("li");
-    listItem.className = "menu-item";
-
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.id = territoryKey + "Checkbox";
-    checkbox.checked = true;
-    listItem.appendChild(checkbox);
-
-    const label = document.createElement("label");
-    label.htmlFor = territoryKey + "Checkbox";
-    label.textContent = "Territorio " + territoryKey.match(/\d+/)[0];
-    listItem.appendChild(label);
-
-    territoriesList.appendChild(listItem);
-
-    // Add event listener to control territory visibility
-    checkbox.addEventListener("change", function (e) {
-      const territory = territories[territoryKey];
-      for (const squareKey in territory) {
-        if (squareKey.startsWith("Square")) {
-          if (e.target.checked) {
-            polygonsMap[territoryKey + squareKey].addTo(map);
-            markersMap[territoryKey + squareKey + "Marker"].addTo(map);
-            markersMap[territoryKey + "Marker"].addTo(map);
-            updateLabelStyles()
-          } else {
-            polygonsMap[territoryKey + squareKey].removeFrom(map);
-            markersMap[territoryKey + squareKey + "Marker"].removeFrom(map);
-            markersMap[territoryKey + "Marker"].removeFrom(map);
-          }
-        }
-      }
-    });
-  }
-}
-
-populateTerritoriesList();
-
-
-// Toggle territories menu option
-function toggleTerritoriesMenu() {
-  const menu = document.getElementById("menu");
-  const territoriesMenu = document.getElementById("territoriesMenu");
-
-  if (menu.style.display === "block") {
-    menu.style.display = "none";
-    territoriesMenu.style.display = "block";
-  } else {
-    menu.style.display = "block";
-    territoriesMenu.style.display = "none";
-  }
-}
-
-document.getElementById("togglePolygons").addEventListener("click", toggleTerritoriesMenu);
-
-
 // Enable device GPS
 map.locate({
   watch: true,
@@ -495,67 +334,3 @@ function onLocationError(e) {
 }
 
 map.on('locationerror', onLocationError);
-
-// Menu button toggle
-let menuVisible = false;
-const menu = document.getElementById('menu');
-
-function toggleMenu() {
-  const menu = document.getElementById("menu");
-  const territoriesMenu = document.getElementById("territoriesMenu");
-
-  if (territoriesMenu.style.display === "block") {
-    territoriesMenu.style.display = "none";
-  } else if (!menuVisible) {
-    menu.style.display = "block";
-    menuVisible = true;
-  } else {
-    menu.style.display = "none";
-    menuVisible = false;
-  }
-}
-
-// Zoom level format
-function updateLabelStyles() {
-  const zoomLevel = map.getZoom();
-  const territoryLabels = document.querySelectorAll(".map-label.number");
-  const squareLabels = document.querySelectorAll(".map-label.square");
-
-  if (zoomLevel === 18) {
-    territoryLabels.forEach(label => {
-      label.style.fontSize = "38px";
-    });
-
-    squareLabels.forEach(label => {
-      label.style.fontSize = "21px";
-    });
-  } else {
-    territoryLabels.forEach(label => {
-      label.style.fontSize = "21px";
-    });
-
-    squareLabels.forEach(label => {
-      label.style.fontSize = "12px";
-    });
-  }
-
-  // Hide square labels at minZoom
-  if (zoomLevel === 15) {
-    territoryLabels.forEach(label => {
-      label.style.fontSize = "18px";
-    });
-
-    squareLabels.forEach(squareLabel => {
-      squareLabel.style.display = 'none';
-    });
-  } else {
-    squareLabels.forEach(squareLabel => {
-      squareLabel.style.display = 'block';
-    });
-  }
-}
-
-
-map.on('zoomend', updateLabelStyles);
-
-document.getElementById('menuBtn').addEventListener('click', toggleMenu);
