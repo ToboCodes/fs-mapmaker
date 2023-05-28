@@ -113,36 +113,48 @@ function setupPolygonInteractions(polygon, polygonName, edges) {
   let midpointMarkers = [];
 
   function createMidpointMarkers() {
-    // Remove old midpoint markers
-    midpointMarkers.forEach(marker => marker.removeFrom(map));
-    midpointMarkers = [];
+  // Remove old midpoint markers
+  midpointMarkers.forEach(marker => marker.removeFrom(map));
+  midpointMarkers = [];
 
-    // Create new midpoint markers
-    const latLngs = polygon.getLatLngs()[0];
-    for (let i = 0; i < latLngs.length; i++) {
-      const nextIndex = (i + 1) === latLngs.length ? 0 : (i + 1);
-      const midpoint = calculateMidpoint([latLngs[i].lat, latLngs[i].lng], [latLngs[nextIndex].lat, latLngs[nextIndex].lng]);
+  // Create new midpoint markers
+  const latLngs = polygon.getLatLngs()[0];
+  for (let i = 0; i < latLngs.length; i++) {
+    const nextIndex = (i + 1) === latLngs.length ? 0 : (i + 1);
+    const midpoint = calculateMidpoint([latLngs[i].lat, latLngs[i].lng], [latLngs[nextIndex].lat, latLngs[nextIndex].lng]);
 
-      const marker = L.marker(midpoint, {
-        icon: L.divIcon({
-          className: 'midpoint-icon',
-          iconSize: [10, 10],
-          html: '<div class="midpoint-icon-content">+</div>'
-        }),
-        draggable: false
-      }).addTo(map);
+    const marker = L.marker(midpoint, {
+      icon: L.divIcon({
+        className: 'midpoint-icon',
+        iconSize: [10, 10],
+        html: '<div class="midpoint-icon-content">+</div>'
+      }),
+      draggable: false
+    }).addTo(map);
 
-      marker.on('click', () => {
-        marker.removeFrom(map);
-        const newMarker = L.marker(marker.getLatLng(), { draggable: true, zIndexOffset: 1000 }).addTo(map);
-        newMarker.on('drag', updatePolygon);
-        vertexMarkers.splice(i + 1, 0, newMarker);
+    marker.on('click', () => {
+      marker.removeFrom(map);
+      const newMarker = L.marker(marker.getLatLng(), { draggable: true, zIndexOffset: 1000 }).addTo(map);
+      newMarker.on('drag', updatePolygon);
+      
+      // Make the new marker deletable
+      newMarker.on('click', () => {
+        newMarker.removeFrom(map);
+        const index = vertexMarkers.indexOf(newMarker);
+        if (index > -1) {
+          vertexMarkers.splice(index, 1);
+        }
         updatePolygon();
       });
 
-      midpointMarkers.push(marker);
-    }
+      vertexMarkers.splice(i + 1, 0, newMarker);
+      updatePolygon();
+    });
+
+    midpointMarkers.push(marker);
   }
+}
+
 
   polygon.on('click', (e) => {
     if (!isEditingEnabled) return;
@@ -208,13 +220,26 @@ function setupPolygonInteractions(polygon, polygonName, edges) {
     createMidpointMarkers();
   }
 
-  const vertexMarkers = edges.map(coord => {
-    const marker = L.marker(coord, { draggable: true, zIndexOffset: 1000 }).addTo(map);
+  const vertexMarkers = edges.map((coord, index) => {
+  const marker = L.marker(coord, { draggable: true, zIndexOffset: 1000 }).addTo(map);
 
-    marker.on('drag', updatePolygon);
+  marker.on('drag', updatePolygon);
 
-    return marker;
+  // Add a click listener to remove the vertex
+  marker.on('click', () => {
+    // Remove the marker from the map
+    marker.removeFrom(map);
+
+    // Remove the marker from the vertexMarkers array
+    vertexMarkers.splice(index, 1);
+
+    // Update the polygon
+    updatePolygon();
   });
+
+  return marker;
+});
+
 
   function showVertexMarkers() {
     vertexMarkers.forEach(marker => marker.addTo(map));
