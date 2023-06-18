@@ -30,7 +30,7 @@ let osmLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let map = L.map('map', {
   layers: [osmLayer],
   maxZoom: 18,
-  minZoom: 15,
+  minZoom: 12,
   maxBounds: [
     coord1,
     coord2
@@ -64,6 +64,10 @@ document.getElementById("editToggle").addEventListener("change", function (e) {
 
 // Load territories and colors from new JSON
 const territories = coords.territories;
+
+// Draw map borders
+let polylinePoints = coords.lines.borders;
+let polyline = L.polyline(polylinePoints, {color: 'blue'}).addTo(map);
 
 // Function to create polygons from the JSON source and assign them variable names
 const polygonsMap = {};
@@ -208,8 +212,8 @@ function setupPolygonInteractions(polygon, polygonName, edges) {
     if (!isEditingEnabled) return;
     const newEdges = vertexMarkers.map(marker => {
       const latLng = marker.getLatLng().wrap();
-      const roundedLat = parseFloat(latLng.lat.toFixed(5));
-      const roundedLng = parseFloat(latLng.lng.toFixed(5));
+      const roundedLat = parseFloat(latLng.lat.toFixed(6));
+      const roundedLng = parseFloat(latLng.lng.toFixed(6));
       return [roundedLat, roundedLng];
     });
     polygon.setLatLngs(newEdges);
@@ -337,16 +341,16 @@ function generateJson() {
     const territoryKey = polygonName.replace(/Square.*/, '');
     const squareKey = polygonName.replace(territoryKey, '');
     const edges = polygon.getLatLngs()[0].map(coord => [
-      parseFloat(coord.lat.toFixed(5)),
-      parseFloat(coord.lng.toFixed(5))
+      parseFloat(coord.lat.toFixed(6)),
+      parseFloat(coord.lng.toFixed(6))
     ]);
 
     if (!output.territories[territoryKey]) {
       output.territories[territoryKey] = {
         color: polygon.options.color,
         terrMarker: [
-          parseFloat(markersMap[`${territoryKey}Marker`].getLatLng().lat.toFixed(5)),
-          parseFloat(markersMap[`${territoryKey}Marker`].getLatLng().lng.toFixed(5))
+          parseFloat(markersMap[`${territoryKey}Marker`].getLatLng().lat.toFixed(6)),
+          parseFloat(markersMap[`${territoryKey}Marker`].getLatLng().lng.toFixed(6))
         ],
       };
     }
@@ -354,8 +358,8 @@ function generateJson() {
     output.territories[territoryKey][squareKey] = {
       edges: edges,
       squareMarker: [
-        parseFloat(markersMap[`${territoryKey}${squareKey}Marker`].getLatLng().lat.toFixed(5)),
-        parseFloat(markersMap[`${territoryKey}${squareKey}Marker`].getLatLng().lng.toFixed(5))
+        parseFloat(markersMap[`${territoryKey}${squareKey}Marker`].getLatLng().lat.toFixed(6)),
+        parseFloat(markersMap[`${territoryKey}${squareKey}Marker`].getLatLng().lng.toFixed(6))
       ]
     };
   }
