@@ -30,7 +30,7 @@ let osmLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let map = L.map('map', {
   layers: [osmLayer],
   maxZoom: 18,
-  minZoom: 12,
+  minZoom: 11,
   maxBounds: [
     coord1,
     coord2
@@ -499,45 +499,51 @@ function toggleMenu() {
   }
 }
 
-// Zoom level format
 function updateLabelStyles() {
   const zoomLevel = map.getZoom();
   const territoryLabels = document.querySelectorAll(".map-label.number");
   const squareLabels = document.querySelectorAll(".map-label.square");
 
-  if (zoomLevel === 18) {
+  if (zoomLevel >= 18) {
     territoryLabels.forEach(label => {
       label.style.fontSize = "38px";
+      label.style.display = 'block';
     });
 
     squareLabels.forEach(label => {
       label.style.fontSize = "21px";
+      label.style.display = 'block';
     });
-  } else {
-    territoryLabels.forEach(label => {
-      label.style.fontSize = "21px";
+  } else if (zoomLevel <= 13) {
+    territoryLabels.forEach(territoryLabel => {
+      territoryLabel.style.display = 'none';
     });
 
-    squareLabels.forEach(label => {
-      label.style.fontSize = "12px";
+    squareLabels.forEach(squareLabel => {
+      squareLabel.style.display = 'none';
     });
-  }
-
-  // Hide square labels at minZoom
-  if (zoomLevel === 15) {
+  } else if (zoomLevel <= 15) {
     territoryLabels.forEach(label => {
       label.style.fontSize = "18px";
+      label.style.display = 'block';
     });
 
     squareLabels.forEach(squareLabel => {
       squareLabel.style.display = 'none';
     });
   } else {
-    squareLabels.forEach(squareLabel => {
-      squareLabel.style.display = 'block';
+    territoryLabels.forEach(label => {
+      label.style.fontSize = "21px";
+      label.style.display = 'block';
+    });
+
+    squareLabels.forEach(label => {
+      label.style.fontSize = "12px";
+      label.style.display = 'block';
     });
   }
 }
+
 
 
 map.on('zoomend', updateLabelStyles);
