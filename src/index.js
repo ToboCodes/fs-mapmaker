@@ -79,13 +79,18 @@ function createZones(territories) {
     for (const squareKey in territory) {
       if (squareKey.startsWith("Square")) {
         const edges = territory[squareKey].edges;
-        const polygon = L.polygon(edges, { color: color, fillOpacity: 0.7, weight: 2 }).addTo(map);
+        let fill = true;  // Default to filled polygons
+        if (territory[squareKey].Fill === "No") {
+          fill = false;  // If Fill is set to "No", create an unfilled polygon
+        }
+        const polygon = L.polygon(edges, { color: color, fillOpacity: fill ? 0.7 : 0, weight: 2, fill: fill }).addTo(map);
         const polygonName = territoryKey + squareKey;
         polygonsMap[polygonName] = polygon;
       }
     }
   }
 }
+
 
 function calculateMidpoint(point1, point2) {
   return [
